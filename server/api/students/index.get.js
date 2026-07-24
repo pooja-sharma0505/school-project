@@ -7,5 +7,8 @@ export default defineEventHandler(async () => {
     "SELECT * FROM students ORDER BY id DESC"
   );
 
-  return rows;
+  return {
+    version: "TEST-123",
+    rows,
+  };
 });
