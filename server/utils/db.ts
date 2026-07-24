@@ -1,6 +1,6 @@
 import mysql from "mysql2/promise";
 
-let pool: mysql.Pool;
+let pool: mysql.Pool | undefined;
 
 export default function getPool() {
   if (!pool) {
@@ -13,14 +13,20 @@ export default function getPool() {
       password: config.dbPassword,
       database: config.dbName,
 
-      // Add this
       ssl: {
         rejectUnauthorized: false,
       },
 
       waitForConnections: true,
-      connectionLimit: 10,
+
+      // IMPORTANT: Clever Cloud only allows 5 total connections.
+      // Vercel can run multiple serverless instances, so keep this low.
+      connectionLimit: 1,
+
       queueLimit: 0,
+
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
     });
   }
 
