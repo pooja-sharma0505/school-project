@@ -1,4 +1,4 @@
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { readBody } from "h3";
 import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
 
@@ -50,9 +50,7 @@ export default defineEventHandler(
       badRequest("Paid amount must be 0 when status is 'unpaid' or 'overdue'.");
     }
 
-    const pool = getPool();
-
-    const [result] = await pool.query(
+    const [result] = await query(
       `INSERT INTO fees (
         student_id,
         title,

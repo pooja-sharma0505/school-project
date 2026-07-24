@@ -1,4 +1,4 @@
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { readBody } from "h3";
 import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
 
@@ -26,9 +26,7 @@ export default defineEventHandler(
 
     if (error) badRequest(error);
 
-    const pool = getPool();
-
-    const [result] = await pool.query(
+    const [result] = await query(
       `INSERT INTO students (
         first_name,
         last_name,

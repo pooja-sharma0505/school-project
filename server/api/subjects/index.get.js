@@ -1,11 +1,9 @@
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { withErrorHandler } from "~/server/utils/api";
 
 export default defineEventHandler(
   withErrorHandler(async () => {
-    const pool = getPool();
-
-    const [rows] = await pool.query(`
+    const [rows] = await query(`
       SELECT
         s.id,
         s.class_id,

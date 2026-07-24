@@ -1,4 +1,4 @@
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { withErrorHandler, requireAuth } from "~/server/utils/api";
 
 export default defineEventHandler(
@@ -7,9 +7,7 @@ export default defineEventHandler(
 
     const id = getRouterParam(event, "id");
 
-    const pool = getPool();
-
-    const [result] = await pool.query(
+    const [result] = await query(
       "DELETE FROM attendance WHERE id = ?",
       [id]
     );
