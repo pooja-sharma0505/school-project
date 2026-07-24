@@ -1,14 +1,15 @@
-import getPool from "~/server/utils/db";
+import getConnection from "~/server/utils/db";
 
 export default defineEventHandler(async () => {
-  const pool = getPool();
+  const connection = await getConnection();
 
-  const [rows] = await pool.query(
-    "SELECT * FROM students ORDER BY id DESC"
-  );
+  try {
+    const [rows] = await connection.query(
+      "SELECT * FROM students ORDER BY id DESC"
+    );
 
-  return {
-    version: "TEST-123",
-    rows,
-  };
+    return rows;
+  } finally {
+    await connection.end();
+  }
 });
