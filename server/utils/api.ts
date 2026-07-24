@@ -23,34 +23,20 @@ import { createError, getHeader, type EventHandler } from 'h3'
  */
 export function withErrorHandler<T>(
   handler: (event: any) => Promise<T>
-): (event: any) => Promise<T> {
+) {
   return async (event: any) => {
     try {
-      return await handler(event)
-  } catch (error: any) {
-  console.error("================================");
-  console.error("API ERROR");
-  console.error(error);
-  console.error("Message:", error?.message);
-  console.error("Stack:", error?.stack);
-  console.error("================================");
+      return await handler(event);
+    } catch (error: any) {
+      console.error("API ERROR:", error);
 
-  if (error?.statusCode) {
-    throw error;
-  }
-
-  const status = error?.statusCode || error?.status || 500;
-  const message = error?.message || "Internal server error";
-
-  throw createError({
-    statusCode: status,
-    statusText: status === 500 ? "Internal Server Error" : undefined,
-    data: { message },
-  });
+      throw createError({
+        statusCode: error?.statusCode || 500,
+        statusMessage: error?.message || "Internal Server Error",
+      });
+    }
+  };
 }
-  }
-}
-
 /**
  * Return a safe empty-array response for GET routes that hit a DB error.
  * This prevents the frontend from receiving an object instead of an array,
