@@ -1,10 +1,34 @@
 import getPool from "~/server/utils/db";
+import { readBody } from "h3";
+import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
 
-export default defineEventHandler(async (event) => {
-  try {
+export default defineEventHandler(
+  withErrorHandler(async (event) => {
+    requireAuth(event);
+
     const body = await readBody(event);
 
+    const error = validateBody(body, [
+      { field: "exam_id", label: "Exam", required: true, type: "number", min: 1 },
+      { field: "student_id", label: "Student", required: true, type: "number", min: 1 },
+      { field: "marks_obtained", label: "Marks obtained", type: "number", min: 0, max: 10000 },
+      { field: "grade", label: "Grade", type: "string", max: 10 },
+      { field: "status", label: "Status", enum: ["pass", "fail"] },
+    ]);
+
+    if (error) badRequest(error);
+
     const pool = getPool();
+
+    // Duplicate prevention: check if a result already exists for this student+exam
+    const [existing] = await pool.query(
+      "SELECT id FROM results WHERE exam_id = ? AND student_id = ? LIMIT 1",
+      [body.exam_id, body.student_id]
+    );
+
+    if (existing.length > 0) {
+      badRequest("A result already exists for this student and exam.");
+    }
 
     const [result] = await pool.query(
       `INSERT INTO results (
@@ -18,22 +42,16 @@ export default defineEventHandler(async (event) => {
       [
         body.exam_id,
         body.student_id,
-        body.marks_obtained,
-        body.grade,
-        body.status
+        body.marks_obtained !== undefined ? Number(body.marks_obtained) : null,
+        body.grade || null,
+        body.status || null,
       ]
     );
 
     return {
       success: true,
       message: "Result added successfully",
-      id: result.insertId
+      id: result.insertId,
     };
-
-  } catch (error) {
-    return {
-      success: false,
-      message: error.message
-    };
-  }
-});
+  })
+);

@@ -1,9 +1,33 @@
 import getPool from "~/server/utils/db";
+import { readBody } from "h3";
+import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
 
-export default defineEventHandler(async (event) => {
-  try {
+export default defineEventHandler(
+  withErrorHandler(async (event) => {
+    requireAuth(event);
+
     const id = getRouterParam(event, "id");
     const body = await readBody(event);
+
+    const error = validateBody(body, [
+      { field: "name", label: "Exam name", required: true, type: "string", max: 100 },
+      { field: "term", label: "Term", type: "string", max: 50 },
+      { field: "subject", label: "Subject", type: "string", max: 100 },
+      { field: "class", label: "Class", type: "string", max: 50 },
+      { field: "exam_date", label: "Exam date", type: "date" },
+      { field: "max_marks", label: "Max marks", type: "number", min: 0, max: 1000 },
+      { field: "pass_marks", label: "Pass marks", type: "number", min: 0, max: 1000 },
+      { field: "note", label: "Note", type: "string", max: 500 },
+    ]);
+
+    if (error) badRequest(error);
+
+    const maxMarks = Number(body.max_marks) || 100;
+    const passMarks = Number(body.pass_marks) || 33;
+
+    if (passMarks > maxMarks) {
+      badRequest("Pass marks cannot exceed max marks.");
+    }
 
     const pool = getPool();
 
@@ -20,27 +44,21 @@ export default defineEventHandler(async (event) => {
        WHERE id=?`,
       [
         body.name,
-        body.term,
-        body.subject,
-        body.class,
-        body.exam_date,
-        body.max_marks,
-        body.pass_marks,
-        body.note,
-        id
+        body.term || null,
+        body.subject || null,
+        body.class || null,
+        body.exam_date || null,
+        maxMarks,
+        passMarks,
+        body.note || null,
+        id,
       ]
     );
 
     return {
       success: true,
       message: "Exam updated successfully",
-      affectedRows: result.affectedRows
+      affectedRows: result.affectedRows,
     };
-
-  } catch (error) {
-    return {
-      success: false,
-      message: error.message
-    };
-  }
-});
+  })
+);

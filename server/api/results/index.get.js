@@ -1,10 +1,13 @@
 import getPool from "~/server/utils/db";
+import { withErrorHandler } from "~/server/utils/api";
 
-export default defineEventHandler(async () => {
-  try {
+export default defineEventHandler(
+  withErrorHandler(async (event) => {
     const pool = getPool();
 
-    const [rows] = await pool.query(`
+    const examId = getQuery(event).exam_id;
+
+    let query = `
       SELECT
         r.id,
         r.exam_id,
@@ -27,15 +30,19 @@ export default defineEventHandler(async () => {
         ON r.student_id = s.id
       JOIN exams e
         ON r.exam_id = e.id
-      ORDER BY r.id DESC
-    `);
+    `;
+
+    const params = [];
+
+    if (examId) {
+      query += " WHERE r.exam_id = ?";
+      params.push(examId);
+    }
+
+    query += " ORDER BY r.id DESC";
+
+    const [rows] = await pool.query(query, params);
 
     return rows;
-
-  } catch (error) {
-    return {
-      success: false,
-      message: error.message
-    };
-  }
-});
+  })
+);

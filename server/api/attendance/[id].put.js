@@ -1,9 +1,21 @@
 import getPool from "~/server/utils/db";
+import { readBody } from "h3";
+import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
 
-export default defineEventHandler(async (event) => {
-  try {
+export default defineEventHandler(
+  withErrorHandler(async (event) => {
+    requireAuth(event);
+
     const id = getRouterParam(event, "id");
     const body = await readBody(event);
+
+    const error = validateBody(body, [
+      { field: "student_id", label: "Student", required: true, type: "number", min: 1 },
+      { field: "attendance_date", label: "Attendance date", required: true, type: "date" },
+      { field: "status", label: "Status", required: true, enum: ["present", "absent", "late", "leave"] },
+    ]);
+
+    if (error) badRequest(error);
 
     const pool = getPool();
 
@@ -17,20 +29,14 @@ export default defineEventHandler(async (event) => {
         body.student_id,
         body.attendance_date,
         body.status,
-        id
+        id,
       ]
     );
 
     return {
       success: true,
       message: "Attendance updated successfully",
-      affectedRows: result.affectedRows
+      affectedRows: result.affectedRows,
     };
-
-  } catch (error) {
-    return {
-      success: false,
-      message: error.message
-    };
-  }
-});
+  })
+);

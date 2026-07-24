@@ -11,10 +11,11 @@ export default defineNuxtConfig({
   },
 
   modules: [
-    '@nuxtjs/tailwindcss',
-    '@nuxt/ui'
+    '@nuxtjs/tailwindcss'
   ],
 
+  nitro: {
+    preset: 'netlify' },
   css: [
     '~/assets/css/main.css'
   ],

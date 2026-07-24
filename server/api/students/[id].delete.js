@@ -1,7 +1,10 @@
 import getPool from "~/server/utils/db";
+import { withErrorHandler, requireAuth } from "~/server/utils/api";
 
-export default defineEventHandler(async (event) => {
-  try {
+export default defineEventHandler(
+  withErrorHandler(async (event) => {
+    requireAuth(event);
+
     const id = getRouterParam(event, "id");
 
     const pool = getPool();
@@ -14,14 +17,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       message: "Student deleted successfully",
-      affectedRows: result.affectedRows
+      affectedRows: result.affectedRows,
     };
-  } catch (error) {
-    console.error(error);
-
-    return {
-      success: false,
-      message: error.message
-    };
-  }
-});
+  })
+);
