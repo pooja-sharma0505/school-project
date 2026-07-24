@@ -1,14 +1,12 @@
 import { getQuery } from "h3";
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { withErrorHandler } from "~/server/utils/api";
 
 export default defineEventHandler(
   withErrorHandler(async (event) => {
-    const pool = getPool();
-
     const date = getQuery(event).date;
 
-    let query = `
+    let sql = `
       SELECT
         attendance.id,
         attendance.student_id,
@@ -26,13 +24,13 @@ export default defineEventHandler(
     const params = [];
 
     if (date) {
-      query += " WHERE DATE(attendance.attendance_date) = ?";
+      sql += " WHERE DATE(attendance.attendance_date) = ?";
       params.push(date);
     }
 
-    query += " ORDER BY attendance.attendance_date DESC";
+    sql += " ORDER BY attendance.attendance_date DESC";
 
-    const [rows] = await pool.query(query, params);
+    const [rows] = await query(sql, params);
 
     return rows;
   })

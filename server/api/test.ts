@@ -1,9 +1,7 @@
-import getPool from '~/server/utils/db'
+import { query } from '~/server/utils/db'
 
 export default defineEventHandler(async () => {
-  const pool = getPool()
-
-  const [rows] = await pool.query('SELECT NOW() AS time')
+  const [rows] = await query('SELECT NOW() AS time')
 
   return rows
 })

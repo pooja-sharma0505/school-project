@@ -1,15 +1,12 @@
-import getConnection from "~/server/utils/db";
+import { query } from "~/server/utils/db";
+import { withErrorHandler } from "~/server/utils/api";
 
-export default defineEventHandler(async () => {
-  const connection = await getConnection();
-
-  try {
-    const [rows] = await connection.query(
+export default defineEventHandler(
+  withErrorHandler(async () => {
+    const [rows] = await query(
       "SELECT * FROM students ORDER BY id DESC"
     );
 
     return rows;
-  } finally {
-    await connection.end();
-  }
-});
+  })
+);

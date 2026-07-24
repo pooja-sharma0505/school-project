@@ -1,14 +1,12 @@
 import { getQuery } from "h3";
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { withErrorHandler } from "~/server/utils/api";
 
 export default defineEventHandler(
   withErrorHandler(async (event) => {
-    const pool = getPool();
-
     const examId = getQuery(event).exam_id;
 
-    let query = `
+    let sql = `
       SELECT
         r.id,
         r.exam_id,
@@ -36,13 +34,13 @@ export default defineEventHandler(
     const params = [];
 
     if (examId) {
-      query += " WHERE r.exam_id = ?";
+      sql += " WHERE r.exam_id = ?";
       params.push(examId);
     }
 
-    query += " ORDER BY r.id DESC";
+    sql += " ORDER BY r.id DESC";
 
-    const [rows] = await pool.query(query, params);
+    const [rows] = await query(sql, params);
 
     return rows;
   })

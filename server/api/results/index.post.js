@@ -1,4 +1,4 @@
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { readBody } from "h3";
 import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
 
@@ -18,10 +18,8 @@ export default defineEventHandler(
 
     if (error) badRequest(error);
 
-    const pool = getPool();
-
     // Duplicate prevention: check if a result already exists for this student+exam
-    const [existing] = await pool.query(
+    const [existing] = await query(
       "SELECT id FROM results WHERE exam_id = ? AND student_id = ? LIMIT 1",
       [body.exam_id, body.student_id]
     );
@@ -30,7 +28,7 @@ export default defineEventHandler(
       badRequest("A result already exists for this student and exam.");
     }
 
-    const [result] = await pool.query(
+    const [result] = await query(
       `INSERT INTO results (
         exam_id,
         student_id,

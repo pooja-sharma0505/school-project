@@ -1,11 +1,10 @@
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 
 export default defineEventHandler(async () => {
   const config = useRuntimeConfig();
 
   try {
-    const pool = getPool();
-    const [rows] = await pool.query("SELECT NOW() AS time");
+    const [rows] = await query("SELECT NOW() AS time");
 
     return {
       success: true,

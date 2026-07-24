@@ -1,4 +1,4 @@
-import getPool from "~/server/utils/db";
+import { query } from "~/server/utils/db";
 import { readBody } from "h3";
 import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
 
@@ -18,10 +18,8 @@ export default defineEventHandler(
 
     if (error) badRequest(error);
 
-    const pool = getPool();
-
     // Fetch the current fee record to validate against
-    const [rows] = await pool.query(
+    const [rows] = await query(
       "SELECT amount, paid_amount FROM fees WHERE id = ?",
       [id]
     );
@@ -61,7 +59,7 @@ export default defineEventHandler(
       badRequest("Status must be 'paid' when total paid equals or exceeds the fee amount.");
     }
 
-    const [result] = await pool.query(
+    const [result] = await query(
       `UPDATE fees
        SET paid_amount = ?,
            status = ?,
