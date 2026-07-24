@@ -13,12 +13,16 @@ export default function getPool() {
       password: config.dbPassword,
       database: config.dbName,
 
+      // Add this
+      ssl: {
+        rejectUnauthorized: false,
+      },
+
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0
+      queueLimit: 0,
     });
   }
 
   return pool;
 }
-
