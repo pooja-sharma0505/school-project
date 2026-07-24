@@ -1,3 +1,4 @@
+import { getQuery } from "h3";
 import getPool from "~/server/utils/db";
 import { withErrorHandler } from "~/server/utils/api";
 
