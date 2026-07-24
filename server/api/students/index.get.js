@@ -3,10 +3,17 @@ import { withErrorHandler } from "~/server/utils/api";
 
 export default defineEventHandler(
   withErrorHandler(async () => {
-    const pool = getPool();
+    try {
+      const pool = getPool();
 
-    const [rows] = await pool.query("SELECT * FROM students ORDER BY id DESC");
+      const [rows] = await pool.query(
+        "SELECT * FROM students ORDER BY id DESC"
+      );
 
-    return rows;
+      return rows;
+    } catch (error) {
+      console.error("Students API Error:", error);
+      throw error;
+    }
   })
 );
