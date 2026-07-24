@@ -27,21 +27,27 @@ export function withErrorHandler<T>(
   return async (event: any) => {
     try {
       return await handler(event)
-    } catch (error: any) {
-      // If it's already a proper HTTP error, re-throw as-is
-      if (error?.statusCode) {
-        throw error
-      }
+  } catch (error: any) {
+  console.error("================================");
+  console.error("API ERROR");
+  console.error(error);
+  console.error("Message:", error?.message);
+  console.error("Stack:", error?.stack);
+  console.error("================================");
 
-      const status = error?.statusCode || error?.status || 500
-      const message = error?.message || 'Internal server error'
+  if (error?.statusCode) {
+    throw error;
+  }
 
-      throw createError({
-        statusCode: status,
-        statusText: status === 500 ? 'Internal Server Error' : undefined,
-        data: { message },
-      })
-    }
+  const status = error?.statusCode || error?.status || 500;
+  const message = error?.message || "Internal server error";
+
+  throw createError({
+    statusCode: status,
+    statusText: status === 500 ? "Internal Server Error" : undefined,
+    data: { message },
+  });
+}
   }
 }
 
