@@ -67,6 +67,11 @@ export default defineNuxtConfig({
     // If not set, auth is disabled (dev mode).
     apiKey: process.env.API_KEY || '',
 
+    // Admin credentials for the login page.
+    // These are private (not exposed to the client).
+    adminEmail: process.env.ADMIN_EMAIL || 'admin@scholar.edu',
+    adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
+
     public: {
       supabaseUrl:
         process.env.NUXT_PUBLIC_SUPABASE_URL ||
