@@ -83,8 +83,75 @@ attendance, fees, exams, and exam results in a school/college.
 - students: (class), (status)
 */
 
+-- ============ CLASSES ============
+CREATE TABLE IF NOT EXISTS classes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_name text NOT NULL,
+  section text NOT NULL,
+  class_teacher text,
+  room_number text,
+  capacity integer DEFAULT 0,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anon_select_classes" ON classes;
+CREATE POLICY "anon_select_classes" ON classes FOR SELECT
+  TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "anon_insert_classes" ON classes;
+CREATE POLICY "anon_insert_classes" ON classes FOR INSERT
+  TO anon, authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_update_classes" ON classes;
+CREATE POLICY "anon_update_classes" ON classes FOR UPDATE
+  TO anon, authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_delete_classes" ON classes;
+CREATE POLICY "anon_delete_classes" ON classes FOR DELETE
+  TO anon, authenticated USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_classes_name ON classes(class_name);
+
+-- ============ SUBJECTS ============
+CREATE TABLE IF NOT EXISTS subjects (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id uuid NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  subject_name text NOT NULL,
+  subject_code text,
+  teacher_name text,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anon_select_subjects" ON subjects;
+CREATE POLICY "anon_select_subjects" ON subjects FOR SELECT
+  TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS "anon_insert_subjects" ON subjects;
+CREATE POLICY "anon_insert_subjects" ON subjects FOR INSERT
+  TO anon, authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_update_subjects" ON subjects;
+CREATE POLICY "anon_update_subjects" ON subjects FOR UPDATE
+  TO anon, authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "anon_delete_subjects" ON subjects;
+CREATE POLICY "anon_delete_subjects" ON subjects FOR DELETE
+  TO anon, authenticated USING (true);
+
+CREATE INDEX IF NOT EXISTS idx_subjects_class ON subjects(class_id);
+
 -- ============ STUDENTS ============
 CREATE TABLE IF NOT EXISTS students (
+>>>>>>>
+
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   first_name text NOT NULL,
   last_name text NOT NULL,
