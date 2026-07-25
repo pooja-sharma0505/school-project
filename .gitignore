@@ -7,9 +7,10 @@ node_modules/
 .netlify/
 dist/
 
-# Environment
+# Environment — keep .env files private, but track the example template
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
 
 # Logs
@@ -26,7 +27,5 @@ Thumbs.db
 *.swp
 *.swo
 
-# Misc
-*.local
-.vercel
-.env*
+# Vercel
+.vercel/

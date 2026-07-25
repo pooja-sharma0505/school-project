@@ -1,9 +1,9 @@
-import { query } from "~/server/utils/db";
+import { safeQuery } from "~/server/utils/db";
 import { withErrorHandler } from "~/server/utils/api";
 
 export default defineEventHandler(
   withErrorHandler(async () => {
-    const [rows] = await query(`
+    const rows = await safeQuery(`
       SELECT
         s.id,
         s.class_id,

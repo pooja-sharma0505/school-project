@@ -54,11 +54,18 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    dbHost: process.env.DB_HOST,
-    dbPort: process.env.DB_PORT,
-    dbUser: process.env.DB_USER,
-    dbPassword: process.env.DB_PASSWORD,
-    dbName: process.env.DB_NAME,
+    // Database connection — required for all API routes.
+    // Defaults are empty strings so the app builds even without .env,
+    // but getPool() will throw a clear error at runtime if they're missing.
+    dbHost: process.env.DB_HOST || '',
+    dbPort: process.env.DB_PORT || '3306',
+    dbUser: process.env.DB_USER || '',
+    dbPassword: process.env.DB_PASSWORD || '',
+    dbName: process.env.DB_NAME || '',
+
+    // Optional API key for write operations (POST/PUT/DELETE).
+    // If not set, auth is disabled (dev mode).
+    apiKey: process.env.API_KEY || '',
 
     public: {
       supabaseUrl:

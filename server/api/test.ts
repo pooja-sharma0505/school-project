@@ -1,7 +1,9 @@
-import { query } from '~/server/utils/db'
+import { query } from "~/server/utils/db";
+import { withErrorHandler } from "~/server/utils/api";
 
-export default defineEventHandler(async () => {
-  const [rows] = await query('SELECT NOW() AS time')
-
-  return rows
-})
+export default defineEventHandler(
+  withErrorHandler(async () => {
+    const [rows] = await query("SELECT NOW() AS time");
+    return rows;
+  })
+);

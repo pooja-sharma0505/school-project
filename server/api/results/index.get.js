@@ -1,5 +1,5 @@
 import { getQuery } from "h3";
-import { query } from "~/server/utils/db";
+import { safeQuery } from "~/server/utils/db";
 import { withErrorHandler } from "~/server/utils/api";
 
 export default defineEventHandler(
@@ -40,7 +40,7 @@ export default defineEventHandler(
 
     sql += " ORDER BY r.id DESC";
 
-    const [rows] = await query(sql, params);
+    const rows = await safeQuery(sql, params);
 
     return rows;
   })

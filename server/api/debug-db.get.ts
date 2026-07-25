@@ -1,31 +1,36 @@
-import { query } from "~/server/utils/db";
+import { healthCheck, getDbConfigSummary } from "~/server/utils/db";
 
 export default defineEventHandler(async () => {
-  const config = useRuntimeConfig();
+  const summary = getDbConfigSummary();
 
   try {
-    const [rows] = await query("SELECT NOW() AS time");
+    const result = await healthCheck();
 
     return {
-      success: true,
-      runtime: {
-        host: config.dbHost,
-        port: config.dbPort,
-        database: config.dbName,
-        user: config.dbUser,
+      success: result.ok,
+      latencyMs: result.latencyMs,
+      // Only expose non-sensitive config for diagnostics.
+      // The password is NEVER included.
+      config: {
+        host: summary.host,
+        port: summary.port,
+        database: summary.database,
+        user: summary.user,
       },
-      rows,
+      ...(result.error ? { error: result.error } : {}),
     };
   } catch (error: any) {
-    console.error(error);
+    console.error("debug-db error:", error);
 
     return {
       success: false,
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      sqlState: error.sqlState,
-      stack: error.stack,
+      error: error.message,
+      config: {
+        host: summary.host,
+        port: summary.port,
+        database: summary.database,
+        user: summary.user,
+      },
     };
   }
 });
