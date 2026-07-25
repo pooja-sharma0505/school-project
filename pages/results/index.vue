@@ -279,7 +279,7 @@ const stats = computed(() => {
 })
 
 const getMark = (id) => marksInput.value[id] || ''
-const studentName = (r) =>`${r.student?.first_name || ''} ${r.student?.last_name || ''}`
+const studentName = (r) =>`${r.first_name || ''} ${r.last_name || ''}`
 
 const formatDate = (d) => {
   if (!d) return "—"

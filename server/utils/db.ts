@@ -33,10 +33,10 @@ export default function getPool() {
 
       // Timeout settings — prevents hanging when Clever Cloud drops idle
       // connections or when the pool is temporarily unavailable.
-      // mysql2 v3 renamed these: connectTimeout (initial conn) and
-      // idleTimeout (idle conn cleanup).
-      connectTimeout: 60000, // 60s to establish the initial connection
-      idleTimeout: 60000,    // 60s idle before a connection is recycled
+      // `connectTimeout` is how long to wait for the initial connection.
+      // `idleTimeout` recycles idle connections after this many ms.
+      connectTimeout: 60000,   // 60s to establish the initial connection
+      idleTimeout: 60000,       // 60s idle before a connection is recycled
     });
 
     // Log pool-level errors (e.g. connection lost) without exposing secrets.
@@ -65,14 +65,36 @@ export default function getPool() {
 export async function query(
   sql: string,
   params?: any[]
-): Promise<[any[], any]> {
+): Promise<any> {
   const pool = getPool();
+  const label = `DB QUERY: ${sql.substring(0, 60).replace(/\s+/g, " ").trim()}`;
+  console.time(label);
   try {
-    return await pool.query(sql, params);
+    const result = await pool.query(sql, params);
+    console.timeEnd(label);
+    // pool.query returns [rows, fields]; callers destructure as [rows]
+    return result;
   } catch (error: any) {
+    console.timeEnd(label);
     // Log the error message only — never log the SQL with embedded params
     // or any connection credentials.
     console.error("DB QUERY ERROR:", error?.message || error);
     throw error;
+  }
+}
+
+/**
+ * Close the shared pool. Useful for graceful shutdown in tests or
+ * when the process is terminating. After calling this, the next
+ * query() call will create a fresh pool.
+ */
+export async function closePool(): Promise<void> {
+  if (pool) {
+    try {
+      await pool.end();
+    } catch (e) {
+      // Ignore errors during shutdown
+    }
+    pool = undefined;
   }
 }

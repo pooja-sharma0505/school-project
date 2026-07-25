@@ -575,18 +575,19 @@ async function fetchStudents() {
 
   try {
 
-    students.value = await $fetch("/api/students")
+    const response = await $fetch("/api/students")
+    console.log("API response:", response)
+    students.value = response
 
   } catch (error) {
     toast.error("Failed to load students.")
     console.error(error)
     students.value = []
-}finally {
+  } finally {
 
     loading.value = false
 
   }
-
 }
 
 
