@@ -53,7 +53,13 @@ function validateDbConfig(config: any): void {
  */
 export default function getPool() {
   if (!pool) {
-    const config = useRuntimeConfig();
+    const config = {
+      dbHost: process.env.DB_HOST || "",
+      dbPort: process.env.DB_PORT || "3306",
+      dbUser: process.env.DB_USER || "",
+      dbPassword: process.env.DB_PASSWORD || "",
+      dbName: process.env.DB_NAME || "",
+    };
 
     try {
       validateDbConfig(config);
@@ -272,12 +278,11 @@ export function getDbConfigSummary(): {
   database: string;
   user: string;
 } {
-  const config = useRuntimeConfig();
   return {
-    host: config.dbHost,
-    port: config.dbPort,
-    database: config.dbName,
-    user: config.dbUser,
+    host: process.env.DB_HOST || "",
+    port: process.env.DB_PORT || "3306",
+    database: process.env.DB_NAME || "",
+    user: process.env.DB_USER || "",
   };
 }
 
