@@ -1,0 +1,42 @@
+
+> dev
+> nuxt dev
+
+[1G[0K[90m│[39m                                                                   [90m8:58:48 AM[39m
+[34m●[39m  [32mNuxt [1m3.21.9[22m[39m[90m (with [39m[90mNitro [1m2.13.4[22m[39m[90m, Vite [1m7.3.6[22m[39m[90m and Vue [1m3.5.40[22m[39m[90m)[39m
+                                                                    [90m8:58:48 AM[39m
+ 
+              █▀▀▀▀▀▀▀██▀██▀▀█▀▀█▀▀▀▀▀▀▀█
+              █ █▀▀▀█ █▀▀ ▄ █▀ ▀█ █▀▀▀█ █
+              █ █   █ ██▄ ▄███  █ █   █ █
+              █ ▀▀▀▀▀ █▀▄▀█▀▄ ▄▀█ ▀▀▀▀▀ █
+              █▀▀▀█▀▀▀▀ ▄ ▀▄  ▀ ▀▀███▀███
+              █▄▀█   ▀▀▀▀▄▄█▄ █▀█  ██▀▀ █
+              ██ ▄█▄█▀▄▄██▄▀ ▀▄█▄ ▀█▀█ ▀█
+              █▀▄█▄█▄▀█  █  ▄ █▀ ▄ ▀▄▀▀ █
+              █▀▄  ▄█▀▄ ▀█▀▄ ▀▀    ▀ █▄██
+              █▀▀▀▀▀▀▀█ █▀▄█▄   █▀█ ▄▄  █
+              █ █▀▀▀█ █ █▀▄▀ ▀▄ ▀▀▀ ▄█▀ █
+              █ █   █ █▀ ▀  ▀█ ▀ ██ ▀▄█▀█
+              █ ▀▀▀▀▀ █  ▀▀ ▄ █ ▄█▀▄▄█ ▀█
+              ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+ 
+[32m  ➜ Local:   [39m [36m[4mhttp://0.0.0.0:[1m5000[22m/[24m[39m
+[35m  ➜ Network: [39m [36m[4mhttp://172.24.0.2:[1m5000[22m/[24m[39m[90m [QR code][39m
+
+[36mℹ[39m Using Tailwind CSS from ~/assets/css/main.css   [90mnuxt:tailwindcss[39m [90m8:58:48 AM[39m
+[36mℹ[39m Tailwind Viewer: [4m[33mhttp://0.0.0.0:5000/_tailwind/[39m[24m [90mnuxt:tailwindcss[39m [90m8:58:49 AM[39m
+[32m✔[39m Vite client built in 71ms                                        [90m8:58:49 AM[39m
+[32m✔[39m Vite server built in 378ms                                       [90m8:58:50 AM[39m
+[32m✔[39m Nuxt Nitro server built in 2145ms                          [90mnitro[39m [90m8:58:54 AM[39m
+[36mℹ[39m Vite server warmed up in 1ms                                     [90m8:58:54 AM[39m
+[36mℹ[39m Vite client warmed up in 5ms                                     [90m8:58:54 AM[39m
+[32m✔[39m Vite server hmr 1 files in 1503.581ms                            [90m8:58:57 AM[39m
+DB QUERY: SELECT 1 AS health_check: 1.556s                          [90m8:58:57 AM[39m
+DB QUERY: SELECT 1 AS health_check: 180.118ms                       [90m8:58:59 AM[39m
+DB QUERY: SELECT f.id, f.student_id, f.: 185.834ms                  [90m8:59:00 AM[39m
+DB QUERY: SELECT attendance.id, attendance.stud: 366.644ms          [90m8:59:00 AM[39m
+DB QUERY: SELECT s.id, s.class_id, s.su: 540.327ms                  [90m8:59:00 AM[39m
+DB QUERY: SELECT * FROM exams ORDER BY exam_date DE: 720.344ms      [90m8:59:00 AM[39m
+DB QUERY: SELECT id, class_name, sectio: 898.432ms                  [90m8:59:00 AM[39m
+DB QUERY: SELECT * FROM students ORDER BY id DESC: 1.077s           [90m8:59:00 AM[39m

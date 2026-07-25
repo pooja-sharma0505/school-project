@@ -1,0 +1,36 @@
+
+> dev
+> nuxt dev
+
+[1G[0K[90m│[39m                                                                   [90m8:53:52 AM[39m
+[34m●[39m  [32mNuxt [1m3.21.9[22m[39m[90m (with [39m[90mNitro [1m2.13.4[22m[39m[90m, Vite [1m7.3.6[22m[39m[90m and Vue [1m3.5.40[22m[39m[90m)[39m
+                                                                    [90m8:53:52 AM[39m
+ 
+              █▀▀▀▀▀▀▀██▀██▀▀█▀▀█▀▀▀▀▀▀▀█
+              █ █▀▀▀█ █▀▀ ▄ █▀ ▀█ █▀▀▀█ █
+              █ █   █ ██▄ ▄███  █ █   █ █
+              █ ▀▀▀▀▀ █▀▄▀█▀▄ ▄▀█ ▀▀▀▀▀ █
+              █▀▀▀█▀▀▀▀ ▄ ▀▄  ▀ ▀▀███▀███
+              █▄▀█   ▀▀▀▀▄▄█▄ █▀█  ██▀▀ █
+              ██ ▄█▄█▀▄▄██▄▀ ▀▄█▄ ▀█▀█ ▀█
+              █▀▄█▄█▄▀█  █  ▄ █▀ ▄ ▀▄▀▀ █
+              █▀▄  ▄█▀▄ ▀█▀▄ ▀▀    ▀ █▄██
+              █▀▀▀▀▀▀▀█ █▀▄█▄   █▀█ ▄▄  █
+              █ █▀▀▀█ █ █▀▄▀ ▀▄ ▀▀▀ ▄█▀ █
+              █ █   █ █▀ ▀  ▀█ ▀ ██ ▀▄█▀█
+              █ ▀▀▀▀▀ █  ▀▀ ▄ █ ▄█▀▄▄█ ▀█
+              ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+ 
+[32m  ➜ Local:   [39m [36m[4mhttp://0.0.0.0:[1m5000[22m/[24m[39m
+[35m  ➜ Network: [39m [36m[4mhttp://172.24.0.2:[1m5000[22m/[24m[39m[90m [QR code][39m
+
+[36mℹ[39m Using Tailwind CSS from ~/assets/css/main.css   [90mnuxt:tailwindcss[39m [90m8:53:53 AM[39m
+
+[36mℹ[39m [32mNuxt[39m collects completely anonymous data about usage.             [90m8:53:53 AM[39m
+  This will help us improve Nuxt developer experience over time.
+  Read more on [4m[36mhttps://github.com/nuxt/telemetry[39m[24m
+
+[?25l[90m[39m
+[36m❯[39m Are you interested in participating?
+[36m[39m[32m●[39m Yes [2m/[22m [2m○[22m [2mNo[22m
+[36m[39m
