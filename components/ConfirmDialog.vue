@@ -42,6 +42,7 @@ const trapFocus = (e: FocusEvent) => {
 watch(
   () => props.modelValue,
   (open) => {
+    if (!process.client) return
     if (open) {
       nextTick(() => {
         const first = dialogRef.value?.querySelector(
@@ -61,6 +62,7 @@ watch(
 
 // Cleanup on unmount
 onUnmounted(() => {
+  if (!process.client) return
   document.removeEventListener('keydown', onKeydown)
   document.removeEventListener('focusin', trapFocus)
 })
