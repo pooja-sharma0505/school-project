@@ -96,12 +96,14 @@ onUnmounted(() => {
               class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0"
             >
               <h3 class="text-lg font-bold text-slate-900">{{ title }}</h3>
-              <button
-                class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                @click="close"
-              >
-                <AppIcon name="search" size="sm" class="w-5 h-5" />
-              </button>
+           <button
+  class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+  @click="close"
+>
+  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+</button>
             </div>
             <div class="flex-1 overflow-y-auto px-6 py-5">
               <slot />

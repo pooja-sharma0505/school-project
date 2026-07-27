@@ -12,10 +12,11 @@
   "engines": {
     "node": ">=22"
   },
- "dependencies": {
-  "@nuxtjs/tailwindcss": "^6.12.2",
-  "mysql2": "^3.22.6",
-  "nuxt": "^3.21.8",
-  "vue": "^3.5.39"
-}
+  "dependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.2",
+    "bcryptjs": "^3.0.3",
+    "mysql2": "^3.22.6",
+    "nuxt": "^3.21.8",
+    "vue": "^3.5.39"
+  }
 }

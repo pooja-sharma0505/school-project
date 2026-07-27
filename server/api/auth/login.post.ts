@@ -1,19 +1,17 @@
 import { setCookie } from "h3";
+import bcrypt from "bcryptjs";
+import { query } from "~/server/utils/db"; // adjust this path to match where your db.ts file actually lives
 
 /**
- * Login endpoint — validates admin credentials and sets an auth cookie.
+ * Login endpoint — validates admin credentials against the `admins` table
+ * in the database and sets an auth cookie.
  *
- * Credentials are read from runtime config (private, not exposed to client):
- *   - adminEmail    (default: admin@scholar.edu)
- *   - adminPassword (default: admin123)
- *
- * On success: sets an `auth_token` cookie (7-day expiry) and returns
- *   { success: true, user: { email, name } }
+ * On success: sets an `auth_token` cookie (7-day expiry) containing the admin's
+ *   database ID, and returns { success: true, user: { id, email, name } }
  *
  * On failure: throws a 401 error.
  */
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig();
   const body = await readBody(event);
 
   const email = body.email;
@@ -26,8 +24,24 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const isValid =
-    email === config.adminEmail && password === config.adminPassword;
+  // Look up the admin by email
+  const [rows] = await query(
+    "SELECT id, email, password_hash, name FROM admins WHERE email = ? LIMIT 1",
+    [email]
+  );
+
+  const admin = rows?.[0];
+
+  // If no matching email, fail immediately (don't reveal whether the email exists)
+  if (!admin) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: "Invalid email or password.",
+    });
+  }
+
+  // Compare the submitted password against the stored bcrypt hash
+  const isValid = await bcrypt.compare(password, admin.password_hash);
 
   if (!isValid) {
     throw createError({
@@ -36,8 +50,10 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Set auth cookie — not httpOnly so the client-side middleware can read it
-  setCookie(event, "auth_token", "authenticated", {
+  // Set auth cookie — stores the admin's database ID so the server can look up
+  // their profile on subsequent requests (e.g. /api/auth/me).
+  // Not httpOnly so the client-side middleware can read it.
+  setCookie(event, "auth_token", String(admin.id), {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
     sameSite: "strict",
@@ -47,8 +63,9 @@ export default defineEventHandler(async (event) => {
     success: true,
     message: "Login successful",
     user: {
-      email: email,
-      name: "Administrator",
+      id: admin.id,
+      email: admin.email,
+      name: admin.name,
     },
   };
 });
