@@ -247,7 +247,7 @@ async function loadDashboard() {
 
   } catch (error) {
     console.error("Dashboard load error:", error)
-    apiError.value = "Failed to load dashboard data."
+    apiError.value = error?.data?.message || error?.message || "Failed to load dashboard data."
     dbHealthy.value = false
   } finally {
     loading.value = false

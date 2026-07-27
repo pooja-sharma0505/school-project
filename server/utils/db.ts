@@ -76,17 +76,16 @@ export default function getPool() {
       database: config.dbName,
 
       ssl: {
-        rejectUnauthorized: false,
+        minVersion: "TLSv1.2",
+        rejectUnauthorized: true,
       },
 
       waitForConnections: true,
 
-      // Clever Cloud only allows 5 total connections.
-      // Vercel can run multiple serverless instances, so keep this low.
-      // With connectionLimit: 1, each warm serverless instance uses at most
-      // 1 connection. Even with 5 concurrent cold-start instances we stay
-      // within the Clever Cloud limit.
-      connectionLimit: 1,
+      // TiDB Cloud allows more connections than Clever Cloud's 5-connection
+      // cap. A slightly higher limit (3) improves throughput under concurrent
+      // requests while staying well within TiDB Cloud's generous quota.
+      connectionLimit: 3,
 
       queueLimit: 0,
 
@@ -222,26 +221,21 @@ export async function query(
 }
 
 /**
- * Execute a SELECT query and return just the rows, returning an empty
- * array on error instead of throwing.
+ * Execute a SELECT query and return just the rows.
  *
- * This is a convenience wrapper around `query` for GET routes that should
- * never crash the frontend — a DB outage simply yields an empty list.
+ * Errors are surfaced (re-thrown) rather than silently swallowed.
+ * The withErrorHandler wrapper on each route converts thrown errors
+ * into proper HTTP error responses so the frontend can display them
+ * instead of seeing an empty array with no indication of failure.
  *
  * @param sql    - The SQL query string
  * @param params - Array of parameter values
- * @returns An array of rows (possibly empty)
+ * @returns An array of rows
+ * @throws {Error} If the query fails after all retries.
  */
 export async function safeQuery(sql: string, params?: any[]): Promise<any[]> {
-  try {
-    const [rows] = await query(sql, params);
-    return rows;
-  } catch (error: any) {
-    // query() with default options already retries transient errors.
-    // If we get here, it's a persistent failure — log and return [].
-    console.error("Safe query error:", error?.message || error);
-    return [];
-  }
+  const [rows] = await query(sql, params);
+  return rows;
 }
 
 // ---------------------------------------------------------------------------

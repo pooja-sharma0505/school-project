@@ -57,18 +57,16 @@
           </button>
         </form>
 
-        <!-- Footer -->
-        <div class="mt-6 text-center text-xs text-slate-400">
-          <p>Default credentials: admin@scholar.edu / admin123</p>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-const email = ref("admin@scholar.edu");
-const password = ref("admin123");
+definePageMeta({ layout: false })
+
+const email = ref("");
+const password = ref("");
 const error = ref("");
 const loading = ref(false);
 

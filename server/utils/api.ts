@@ -33,6 +33,7 @@ export function withErrorHandler<T>(
       throw createError({
         statusCode: error?.statusCode || 500,
         statusMessage: error?.message || "Internal Server Error",
+        data: { message: error?.message || "Internal Server Error" },
       });
     }
   };
