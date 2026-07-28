@@ -563,7 +563,7 @@ return
 showForm.value = false
 resetForm()
 
-await fetchFees()
+await refresh()
 
 if (isEdit) {
   toast.success("Fee updated successfully.")
@@ -669,7 +669,7 @@ if (amount > balance) {
 
     showPayment.value = false
 
-    await fetchFees()
+    await refresh()
     toast.success("Payment recorded successfully.")
 
   } catch (error) {
@@ -696,7 +696,7 @@ const doDelete = async () => {
     showDelete.value = false
     deletingFee.value = null
 
-    await fetchFees()
+    await refresh()
 toast.success("Fee deleted successfully.")
   } catch (error) {
   console.error(error)
@@ -727,8 +727,17 @@ async function fetchStudents() {
   }
 }
 
-onMounted(async () => {
-  await fetchStudents()
-  await fetchFees()
-})
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
+  'fees-page',
+  async () => {
+    await fetchStudents()
+    await refresh()
+  },
+  { server: true, lazy: false }
+)
+
+const refresh = async () => {
+  await refreshData()
+}
 </script>

@@ -341,7 +341,7 @@ const saveAttendance = async () => {
       justSaved.value = false
     }, 2500)
 
-    await loadData()
+    await refresh()
     toast.success("Attendance saved successfully.")
 
   } catch (error) {
@@ -357,7 +357,14 @@ watch(selectedDate, () => {
   loadData()
 })
 
-onMounted(() => {
-  loadData()
-})
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
+  'attendance',
+  () => loadData(),
+  { server: true, lazy: false }
+)
+
+const refresh = async () => {
+  await refreshData()
+}
 </script>

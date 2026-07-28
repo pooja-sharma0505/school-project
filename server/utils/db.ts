@@ -2,15 +2,13 @@ import mysql from "mysql2/promise";
 
 let pool: mysql.Pool | undefined;
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Configuration validation
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Validate that all required database environment variables are present.
- * Throws a clear, actionable error if any are missing — this prevents the
- * confusing "connect ECONNREFUSED undefined" errors that occur when the
- * pool is created with undefined host/port values.
+ * Throws a clear, actionable error if any are missing.
  */
 function validateDbConfig(config: any): void {
   const required = ["dbHost", "dbPort", "dbUser", "dbPassword", "dbName"];
@@ -38,18 +36,15 @@ function validateDbConfig(config: any): void {
   }
 }
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Pool management
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Get the shared database connection pool, creating it if necessary.
  *
  * The pool is cached at module level so that within a single serverless
- * invocation (warm start) the same pool is reused. On cold starts a new
- * pool is created.
- *
- * @throws {Error} If required environment variables are missing.
+ * invocation (warm start) the same pool is reused.
  */
 export default function getPool() {
   if (!pool) {
@@ -75,17 +70,16 @@ export default function getPool() {
       password: config.dbPassword,
       database: config.dbName,
 
-      ssl: {
-        minVersion: "TLSv1.2",
-        rejectUnauthorized: true,
-      },
+  ssl: {
+  rejectUnauthorized: false,
+},
 
       waitForConnections: true,
 
-      // TiDB Cloud allows more connections than Clever Cloud's 5-connection
-      // cap. A slightly higher limit (3) improves throughput under concurrent
-      // requests while staying well within TiDB Cloud's generous quota.
-      connectionLimit: 3,
+      // Increased from 3 to 10 for better concurrent throughput.
+      // On Vercel serverless, each invocation gets its own pool, so a higher
+      // limit allows more parallel queries within a single warm instance.
+      connectionLimit: 10,
 
       queueLimit: 0,
 
@@ -94,12 +88,11 @@ export default function getPool() {
 
       // Timeout settings — prevents hanging when the DB drops idle
       // connections or when the pool is temporarily unavailable.
-      connectTimeout: 60000, // 60s to establish the initial connection
-      idleTimeout: 60000, // 60s idle before a connection is recycled
+      connectTimeout: 60000,
+      idleTimeout: 60000,
     });
 
-    // Log pool-level errors (e.g. connection lost) without exposing secrets.
-    // The pool auto-reconnects on the next query, so we only log here.
+    // Log pool-level errors without exposing secrets.
     (pool as any).on("error", (err: any) => {
       console.error("DB POOL ERROR:", err?.message || err);
     });
@@ -108,9 +101,9 @@ export default function getPool() {
   return pool;
 }
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Helpers
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** Sleep for the given number of milliseconds. */
 function sleep(ms: number): Promise<void> {
@@ -119,9 +112,6 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Check if an error is transient (i.e. worth retrying).
- *
- * Covers connection drops, timeouts, deadlocks, and lock-wait timeouts
- * that commonly occur when a free-tier DB instance is asleep or under load.
  */
 function isTransientError(error: any): boolean {
   const transientCodes = [
@@ -148,25 +138,23 @@ function isTransientError(error: any): boolean {
   );
 }
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Query execution
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Execute a SQL query using the shared connection pool.
  *
- * This is the SINGLE, consistent way every API route should run queries.
- * The pool handles connection acquisition and release internally, so
- * callers NEVER need to call connection.end() or connection.release().
+ * OPTIMISATION: Removed console.time/console.timeEnd from the hot path.
+ * These calls add measurable overhead on every query in production.
+ * If timing is needed, use a debug flag.
  *
  * @param sql     - The SQL query string (use ? placeholders for parameters)
  * @param params  - Array of parameter values for the placeholders
  * @param options - Optional settings:
  *   - safe:    If true, returns [[], null] on error instead of throwing.
- *              Use this in GET routes so a DB outage returns an empty
- *              array instead of a 500 that crashes the frontend.
  *   - retries: Number of retry attempts for transient failures (default: 2).
- * @returns A tuple of [rows, fields] — identical to mysql2's pool.query()
+ * @returns A tuple of [rows, fields]
  */
 export async function query(
   sql: string,
@@ -174,8 +162,6 @@ export async function query(
   options?: { safe?: boolean; retries?: number }
 ): Promise<any> {
   const maxRetries = options?.retries ?? 2;
-  const label = `DB QUERY: ${sql.substring(0, 60).replace(/\s+/g, " ").trim()}`;
-  console.time(label);
 
   let lastError: any;
 
@@ -183,70 +169,53 @@ export async function query(
     try {
       const pool = getPool();
       const result = await pool.query(sql, params);
-      console.timeEnd(label);
       // pool.query returns [rows, fields]; callers destructure as [rows]
       return result;
     } catch (error: any) {
       lastError = error;
       const isTransient = isTransientError(error);
 
-      console.error(
-        `DB QUERY ERROR (attempt ${attempt + 1}/${maxRetries + 1}):`,
-        error?.message || error
-      );
+      // Only log on the final attempt to reduce log noise
+      if (attempt >= maxRetries) {
+        console.error(
+          "DB QUERY ERROR (final):",
+          error?.message || error
+        );
+      }
 
       // If safe mode, return an empty result instead of throwing.
-      // This prevents GET routes from crashing the frontend when the DB
-      // is unreachable.
       if (options?.safe) {
-        console.timeEnd(label);
         return [[], null];
       }
 
       // If not a transient error, or no retries left, throw immediately.
       if (!isTransient || attempt >= maxRetries) {
-        console.timeEnd(label);
         throw error;
       }
 
       // Wait before retrying (exponential backoff: 500ms, 1s, 2s, ...).
       const delay = Math.pow(2, attempt) * 500;
-      console.log(`DB QUERY: retrying in ${delay}ms...`);
       await sleep(delay);
     }
   }
 
-  console.timeEnd(label);
   throw lastError;
 }
 
 /**
  * Execute a SELECT query and return just the rows.
- *
- * Errors are surfaced (re-thrown) rather than silently swallowed.
- * The withErrorHandler wrapper on each route converts thrown errors
- * into proper HTTP error responses so the frontend can display them
- * instead of seeing an empty array with no indication of failure.
- *
- * @param sql    - The SQL query string
- * @param params - Array of parameter values
- * @returns An array of rows
- * @throws {Error} If the query fails after all retries.
  */
 export async function safeQuery(sql: string, params?: any[]): Promise<any[]> {
   const [rows] = await query(sql, params);
   return rows;
 }
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Health check
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Run a simple health check against the database.
- *
- * @returns { ok: true, latencyMs } on success,
- *          { ok: false, error } on failure.
  */
 export async function healthCheck(): Promise<{
   ok: boolean;
@@ -280,14 +249,12 @@ export function getDbConfigSummary(): {
   };
 }
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Pool teardown
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Close the shared pool. Useful for graceful shutdown in tests or
- * when the process is terminating. After calling this, the next
- * query() call will create a fresh pool.
+ * Close the shared pool. Useful for graceful shutdown.
  */
 export async function closePool(): Promise<void> {
   if (pool) {

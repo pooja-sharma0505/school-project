@@ -977,7 +977,7 @@ return
 showForm.value = false
 resetForm()
 
-await fetchClasses()
+await refresh()
 
 if (isEdit) {
   toast.success("Class updated successfully.")
@@ -1031,7 +1031,7 @@ async function doDelete() {
 
     deletingClass.value = null
 
-    await fetchClasses()
+    await refresh()
 toast.success("Class deleted successfully.")
   }
 
@@ -1066,9 +1066,14 @@ catch (err) {
 
 }
 
-onMounted(() => {
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
+  'classes',
+  () => fetchClasses(),
+  { server: true, lazy: false }
+)
 
-  fetchClasses()
-
-})
+const refresh = async () => {
+  await refreshData()
+}
 </script>

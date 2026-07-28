@@ -259,7 +259,7 @@ async function seedDatabase() {
   try {
     const result = await $fetch("/api/seed")
     if (result.success) {
-      await loadDashboard()
+      await refresh()
     } else {
       apiError.value = result.error || "Failed to seed database."
     }
@@ -271,7 +271,14 @@ async function seedDatabase() {
   }
 }
 
-onMounted(() => {
-  loadDashboard()
-})
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
+  'dashboard',
+  () => loadDashboard(),
+  { server: true, lazy: false }
+)
+
+const refresh = async () => {
+  await refreshData()
+}
 </script>

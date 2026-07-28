@@ -585,44 +585,6 @@ function confirmDelete(subject) {
 }
 
 
-async function fetchSubjects() {
-
-  loading.value = true
-
-  try {
-
-    subjects.value = await $fetch("/api/subjects")
-
-  } catch (error) {
-
-    console.error(error)
-
-    subjects.value = []
-
-  } finally {
-
-    loading.value = false
-
-  }
-
-}
-
-async function fetchClasses() {
-
-  try {
-
-    classes.value = await $fetch("/api/classes")
-
-  } catch (error) {
-
-    console.error(error)
-
-    classes.value = []
-
-  }
-
-}
-
 async function saveSubject() {
 
   formError.value = ""
@@ -691,7 +653,7 @@ return
 
     showForm.value = false
 
-    await fetchSubjects()
+    await refresh()
 if (editingSubject.value) {
   toast.success("Subject updated successfully.")
 } else {
@@ -734,7 +696,7 @@ async function doDelete() {
 
     deletingSubject.value = null
 
-    await fetchSubjects()
+    await refresh()
 toast.success("Subject deleted successfully.")
   } catch (error) {
 
@@ -744,15 +706,23 @@ toast.success("Subject deleted successfully.")
 
 }
 
-onMounted(async () => {
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { data: subjectsData, pending: loading, refresh: refreshSubjects } = await useAsyncData(
+  'subjects',
+  () => $fetch('/api/subjects'),
+  { server: true, lazy: false }
+)
 
-  await Promise.all([
+const { data: classesData } = await useAsyncData(
+  'classes-for-subjects',
+  () => $fetch('/api/classes'),
+  { server: true, lazy: false }
+)
 
-    fetchSubjects(),
+const subjects = computed(() => subjectsData.value || [])
+const classes = computed(() => classesData.value || [])
 
-    fetchClasses()
-
-  ])
-
-})
+const refresh = async () => {
+  await refreshSubjects()
+}
 </script>

@@ -451,19 +451,21 @@ async function fetchStudents() {
 
 }
 
-onMounted(async () => {
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
+  'results-page',
+  async () => {
+    await fetchExams()
+    await fetchStudents()
+    if (exams.value.length) {
+      selectedExamId.value = exams.value[0].id
+      await loadResults()
+    }
+  },
+  { server: true, lazy: false }
+)
 
-  await fetchExams()
-
-  await fetchStudents()
-
-  if (exams.value.length) {
-
-    selectedExamId.value = exams.value[0].id
-
-    await loadResults()
-
-  }
-
-})
+const refresh = async () => {
+  await refreshData()
+}
 </script>

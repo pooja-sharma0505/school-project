@@ -11,7 +11,8 @@ export default defineNuxtConfig({
   },
 
   modules: [
-    '@nuxtjs/tailwindcss'
+    '@nuxtjs/tailwindcss',
+    '@nuxt/image'
   ],
 
   css: [
@@ -20,6 +21,21 @@ export default defineNuxtConfig({
 
   tailwindcss: {
     cssPath: '~/assets/css/main.css'
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Image optimization — converts images to WebP, lazy-loads by default,
+  // and generates responsive srcsets.
+  // ─────────────────────────────────────────────────────────────────────────────
+  image: {
+    provider: 'ipx',
+    quality: 80,
+    format: ['webp'],
+    densities: [1, 2],
+    modifier: {
+      format: 'webp',
+      quality: 80
+    }
   },
 
   app: {
@@ -34,6 +50,10 @@ export default defineNuxtConfig({
         {
           name: 'description',
           content: 'Complete School & College Management System'
+        },
+        {
+          name: 'theme-color',
+          content: '#ffffff'
         }
       ],
       link: [
@@ -49,27 +69,61 @@ export default defineNuxtConfig({
         {
           rel: 'stylesheet',
           href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap'
+        },
+        {
+          rel: 'preload',
+          as: 'image',
+          href: '/favicon.ico'
         }
       ]
     }
   },
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Route Rules — SSR for dynamic pages, ISR for static-ish data,
+  // and server caching via routeRules cache on API routes.
+  // ─────────────────────────────────────────────────────────────────────────────
+  routeRules: {
+    // Login page — no auth, static prerender
+    '/login': { prerender: true, static: true },
+
+    // Dashboard — SSR with short cache (data changes frequently)
+    '/': { ssr: true, swr: 60 },
+
+    // List pages — SSR with 60-second SWR
+    '/students': { ssr: true, swr: 60 },
+    '/classes': { ssr: true, swr: 60 },
+    '/subjects': { ssr: true, swr: 60 },
+    '/attendance': { ssr: true, swr: 60 },
+    '/exams': { ssr: true, swr: 60 },
+    '/fees': { ssr: true, swr: 60 },
+    '/results': { ssr: true, swr: 60 },
+
+    // API routes — server cache with different TTLs
+    '/api/health': { static: true, swr: 10 },
+    '/api/dashboard': { cache: { swr: true, maxAge: 60 } },
+    '/api/students': { cache: { swr: true, maxAge: 60 } },
+    '/api/classes': { cache: { swr: true, maxAge: 120 } },
+    '/api/subjects': { cache: { swr: true, maxAge: 120 } },
+    '/api/exams': { cache: { swr: true, maxAge: 120 } },
+    '/api/attendance': { cache: { swr: true, maxAge: 60 } },
+    '/api/fees': { cache: { swr: true, maxAge: 60 } },
+    '/api/results': { cache: { swr: true, maxAge: 60 } },
+    '/api/auth/me': { cache: { swr: true, maxAge: 30 } }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Runtime config — same as before, kept intact
+  // ─────────────────────────────────────────────────────────────────────────────
   runtimeConfig: {
-    // Database connection — required for all API routes.
-    // Defaults are empty strings so the app builds even without .env,
-    // but getPool() will throw a clear error at runtime if they're missing.
     dbHost: process.env.DB_HOST || '',
     dbPort: process.env.DB_PORT || '3306',
     dbUser: process.env.DB_USER || '',
     dbPassword: process.env.DB_PASSWORD || '',
     dbName: process.env.DB_NAME || '',
 
-    // Optional API key for write operations (POST/PUT/DELETE).
-    // If not set, auth is disabled (dev mode).
     apiKey: process.env.API_KEY || '',
 
-    // Admin credentials for the login page.
-    // These are private (not exposed to the client).
     adminEmail: process.env.ADMIN_EMAIL || 'admin@scholar.edu',
     adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
 
@@ -84,5 +138,80 @@ export default defineNuxtConfig({
         process.env.VITE_SUPABASE_ANON_KEY ||
         ''
     }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Experimental features — payload extraction reduces client JS,
+  // view transitions for SPA-like navigation.
+  // ─────────────────────────────────────────────────────────────────────────────
+  experimental: {
+    payloadExtraction: true,
+    viewTransition: true,
+    appManifest: true,
+    asyncContext: true
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Vite optimisation — manualChunks, tree shaking, minification
+  // ─────────────────────────────────────────────────────────────────────────────
+  vite: {
+    build: {
+      // Split vendor bundles for parallel loading
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vue': ['vue', 'vue-router'],
+            'vendor': ['mysql2', 'bcryptjs']
+          }
+        }
+      },
+      // Minify with esbuild (faster than terser)
+      minify: 'esbuild',
+      // Target modern browsers for smaller bundles
+      target: 'es2022',
+      // Enable CSS code splitting
+      cssCodeSplit: true,
+      // Reduce chunk size warning threshold
+      chunkSizeWarningLimit: 1000
+    },
+    // Optimise dependencies
+    optimizeDeps: {
+      include: ['vue', 'vue-router'],
+      // Exclude server-only deps from client bundle
+      exclude: ['mysql2', 'bcryptjs']
+    },
+    ssr: {
+      noExternal: []
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Nitro — server engine optimisation for Vercel
+  // ─────────────────────────────────────────────────────────────────────────────
+  nitro: {
+    preset: 'vercel',
+    compressPublicAssets: true,
+    storage: {
+      cache: {
+        driver: 'memory'
+      }
+    },
+    // Vercel-specific: reduce cold starts
+    serveStatic: true
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Build optimisation
+  // ─────────────────────────────────────────────────────────────────────────────
+  build: {
+    transpile: []
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // TypeScript
+  // ─────────────────────────────────────────────────────────────────────────────
+  typescript: {
+    strict: true,
+    shim: false
   }
 })

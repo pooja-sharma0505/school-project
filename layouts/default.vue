@@ -166,9 +166,12 @@ const { fetchUser } = useAuth()
 
 // Fetch the current admin's profile on mount so the ProfileMenu
 // can display their name/avatar without a page refresh
-onMounted(() => {
-  fetchUser()
-})
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { pending: userLoading } = await useAsyncData(
+  'auth-user',
+  () => fetchUser(),
+  { server: true, lazy: false }
+)
 
 const navGroups = [
   {

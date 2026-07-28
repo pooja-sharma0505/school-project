@@ -420,7 +420,7 @@ return
 showForm.value = false
 resetForm()
 
-await fetchExams()
+await refresh()
 
 if (isEdit) {
   toast.success("Exam updated successfully.")
@@ -453,7 +453,7 @@ const doDelete = async () => {
 deletingExam.value = null
 showDelete.value = false
 
-await fetchExams()
+await refresh()
 
 toast.success("Exam deleted successfully.")
 
@@ -488,7 +488,20 @@ const fetchExams = async () => {
   }
 }
 
-onMounted(() => {
-  fetchExams()
-})
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { data: examsAsync, pending: loadingAsync, refresh: refreshExams } = await useAsyncData(
+  'exams',
+  () => $fetch('/api/exams'),
+  { server: true, lazy: false }
+)
+
+if (examsAsync.value) {
+  exams.value = examsAsync.value
+  loading.value = false
+}
+
+const refresh = async () => {
+  await refreshExams()
+  if (examsAsync.value) exams.value = examsAsync.value
+}
 </script>

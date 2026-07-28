@@ -516,7 +516,7 @@ return
 const isEdit = !!editingStudent.value
 
 showForm.value = false
-await fetchStudents()
+await refresh()
 
 if (isEdit) {
   toast.success("Student updated successfully.")
@@ -560,7 +560,7 @@ const doDelete = async () => {
     showDelete.value = false
     deletingStudent.value = null
 
-    await fetchStudents()
+    await refresh()
 toast.success("Student deleted successfully.")
   } catch (error) {
 
@@ -589,10 +589,15 @@ async function fetchStudents() {
 }
 
 
-onMounted(async () => {
+// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
+  'students',
+  () => fetchStudents(),
+  { server: true, lazy: false }
+)
 
-  await fetchStudents()
-
-})
+const refresh = async () => {
+  await refreshData()
+}
 
 </script>
