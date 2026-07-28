@@ -152,11 +152,11 @@
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
-      <div
-        v-if="loading"
-        class="p-6 text-center text-slate-500">
-        Loading subjects...
-      </div>
+       <div
+         v-if="subjectsLoading"
+         class="p-6 text-center text-slate-500">
+         Loading subjects...
+       </div>
 
       <div
         v-else-if="filtered.length === 0"
@@ -429,10 +429,6 @@
 
 <script setup>
 const toast = useToast()
-const subjects = ref([])
-const classes = ref([])
-
-const loading = ref(true)
 const saving = ref(false)
 
 const search = ref("")
@@ -707,7 +703,7 @@ toast.success("Subject deleted successfully.")
 }
 
 // OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
-const { data: subjectsData, pending: loading, refresh: refreshSubjects } = await useAsyncData(
+const { data: subjectsData, pending: subjectsLoading, refresh: refreshSubjects } = await useAsyncData(
   'subjects',
   () => $fetch('/api/subjects'),
   { server: true, lazy: false }
