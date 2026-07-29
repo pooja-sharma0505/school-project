@@ -9,10 +9,6 @@ let pool: mysql.Pool | undefined;
 /**
  * Validate that all required database environment variables are present.
  * Throws a clear, actionable error if any are missing.
- *
- * Also validates SESSION_SECRET, which is required for secure cookie signing
- * in production (Vercel). If missing, the app should still function but
- * cookies will not be cryptographically signed.
  */
 function validateDbConfig(config: any): void {
   const required = ["dbHost", "dbPort", "dbUser", "dbPassword", "dbName"];
@@ -38,15 +34,6 @@ function validateDbConfig(config: any): void {
         "Locally, copy .env.example to .env and fill in your values."
     );
   }
-
-  // Warn (but don't throw) if SESSION_SECRET is missing — it's needed for
-  // secure cookie signing in production.
-  if (!process.env.SESSION_SECRET) {
-    console.warn(
-      "SESSION_SECRET is not set. Cookies will not be cryptographically signed. " +
-        "On Vercel, add SESSION_SECRET in Project Settings → Environment Variables."
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,15 +45,21 @@ function validateDbConfig(config: any): void {
  *
  * The pool is cached at module level so that within a single serverless
  * invocation (warm start) the same pool is reused.
+ *
+ * Configuration is read from useRuntimeConfig() (Nuxt/Nitro convention)
+ * rather than process.env directly, so that values are properly resolved
+ * in the Nitro serverless runtime (including Vercel's vercel preset).
  */
 export default function getPool() {
   if (!pool) {
+    const runtimeConfig = useRuntimeConfig();
+
     const config = {
-      dbHost: process.env.DB_HOST || "",
-      dbPort: process.env.DB_PORT || "3306",
-      dbUser: process.env.DB_USER || "",
-      dbPassword: process.env.DB_PASSWORD || "",
-      dbName: process.env.DB_NAME || "",
+      dbHost: runtimeConfig.dbHost,
+      dbPort: runtimeConfig.dbPort,
+      dbUser: runtimeConfig.dbUser,
+      dbPassword: runtimeConfig.dbPassword,
+      dbName: runtimeConfig.dbName,
     };
 
     try {
@@ -76,6 +69,14 @@ export default function getPool() {
       throw error;
     }
 
+    // Warn if JWT secret is missing (needed for auth cookie signing).
+    if (!runtimeConfig.jwtSecret) {
+      console.warn(
+        "JWT_SECRET is not set. Authentication will not work. " +
+          "On Vercel, add JWT_SECRET in Project Settings → Environment Variables."
+      );
+    }
+
     pool = mysql.createPool({
       host: config.dbHost,
       port: Number(config.dbPort),
@@ -83,8 +84,10 @@ export default function getPool() {
       password: config.dbPassword,
       database: config.dbName,
 
+      // TiDB Cloud requires TLS 1.2+ with certificate validation.
       ssl: {
-        rejectUnauthorized: false,
+        minVersion: "TLSv1.2",
+        rejectUnauthorized: true,
       },
 
       waitForConnections: true,
@@ -254,11 +257,12 @@ export function getDbConfigSummary(): {
   database: string;
   user: string;
 } {
+  const config = useRuntimeConfig();
   return {
-    host: process.env.DB_HOST || "",
-    port: process.env.DB_PORT || "3306",
-    database: process.env.DB_NAME || "",
-    user: process.env.DB_USER || "",
+    host: config.dbHost,
+    port: config.dbPort,
+    database: config.dbName,
+    user: config.dbUser,
   };
 }
 

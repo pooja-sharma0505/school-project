@@ -19,13 +19,20 @@ import { withErrorHandler } from "~/server/utils/api";
  */
 export default defineEventHandler(
   withErrorHandler(async () => {
-    const rows = await safeQuery(
-      `SELECT id, first_name, last_name, email, phone, gender,
-              date_of_birth, class, section, roll_number, status
-       FROM students
-       ORDER BY id DESC`
-    );
+    try {
+      const rows = await safeQuery(
+        `SELECT id, first_name, last_name, email, phone, gender,
+                date_of_birth, class, section, roll_number, status
+         FROM students
+         ORDER BY id DESC`
+      );
 
-    return rows;
+      return rows;
+    } catch (error) {
+      // Log the actual error so it shows up in Vercel's runtime logs
+      // instead of a generic 500 with no details.
+      console.error(error);
+      throw error;
+    }
   })
 );
