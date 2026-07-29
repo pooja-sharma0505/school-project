@@ -1,48 +1,39 @@
-import { getCookie } from "h3";
-import { query } from "~/server/utils/db";
+import { getAuthUser } from "~/server/utils/auth";
 
 /**
  * GET /api/auth/me
  *
- * Reads the `auth_token` cookie (which now stores the admin's database ID),
- * looks up the admin row, and returns their profile data (id, name, email).
+ * Reads the `auth_token` JWT cookie, verifies it using JWT_SECRET, and
+ * returns the decoded user payload (id, email, name, role).
  *
- * Used by the frontend to populate the profile menu after page load or refresh.
+ * This endpoint is stateless — no database lookup is needed because the
+ * user data is embedded in the signed JWT. This makes it work reliably
+ * across Vercel's serverless function instances.
  *
- * On success: { success: true, user: { id, name, email } }
- * On failure: 401 if no cookie / admin not found.
+ * Used by the frontend to populate the profile menu after page load or
+ * refresh, and by the global auth middleware to guard protected routes.
+ *
+ * On success: { success: true, user: { id, name, email, role } }
+ * On failure: 401 if no cookie / token is invalid or expired.
  */
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, "auth_token");
+  const user = getAuthUser(event);
 
-  if (!token) {
+  if (!user) {
     throw createError({
       statusCode: 401,
       statusMessage: "Not authenticated.",
-    });
-  }
-
-  // The cookie stores the admin's database ID
-  const [rows] = await query(
-    "SELECT id, name, email FROM admins WHERE id = ? LIMIT 1",
-    [token]
-  );
-
-  const admin = rows?.[0];
-
-  if (!admin) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Admin not found.",
+      data: { message: "Authentication required. Please log in." },
     });
   }
 
   return {
     success: true,
     user: {
-      id: admin.id,
-      name: admin.name,
-      email: admin.email,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
     },
   };
 });

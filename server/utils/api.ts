@@ -141,31 +141,12 @@ export function badRequest(message: string): never {
 // ---------------------------------------------------------------------------
 // Auth helper
 // ---------------------------------------------------------------------------
-
-/**
- * Require authentication on a route.
- *
- * In a real app this would check a session/JWT. For this project we use a
- * simple API-key header (X-API-Key) that can be configured via runtime config.
- *
- * Routes that need auth should call requireAuth(event) at the top.
- */
-export function requireAuth(event: any): void {
-  const config = useRuntimeConfig()
-  const apiKey = config.apiKey
-
-  // If no API key is configured, allow all requests (dev mode)
-  if (!apiKey) {
-    return
-  }
-
-  const providedKey = getHeader(event, 'x-api-key')
-
-  if (!providedKey || providedKey !== apiKey) {
-    throw createError({
-      statusCode: 401,
-      statusText: 'Unauthorized',
-      data: { message: 'Authentication required.' },
-    })
-  }
-}
+//
+// JWT-based authentication is now handled by ~/server/utils/auth.ts.
+// Use requireAuth(event) from that module in any protected API route:
+//   import { requireAuth } from '~/server/utils/auth'
+//   const user = requireAuth(event)
+//
+// The old API-key-based requireAuth has been removed to avoid duplicate
+// import conflicts. If API-key auth is needed for specific routes, use a
+// differently-named function or configure it in a separate utility.

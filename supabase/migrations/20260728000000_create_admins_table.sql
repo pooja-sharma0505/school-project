@@ -16,9 +16,13 @@ CREATE TABLE IF NOT EXISTS admins (
   email text UNIQUE NOT NULL,
   password_hash text NOT NULL,
   name text NOT NULL,
+  role text NOT NULL DEFAULT 'admin',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Add role column to existing tables (for databases created before this migration)
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'admin';
 
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 

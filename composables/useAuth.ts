@@ -1,31 +1,45 @@
 /**
  * Authentication composable for the admin panel.
  *
- * Uses a simple cookie-based session:
- *   - `login()`   calls /api/auth/login, which sets an `auth_token` cookie
- *                 containing the admin's database ID
- *   - `logout()`  calls /api/auth/logout, which clears the cookie
- *   - `checkAuth()` syncs the `isAuthenticated` state with the cookie
+ * Uses JWT-based auth with an httpOnly cookie:
+ *   - `login()`    calls /api/auth/login, which signs a JWT and sets it
+ *                  as an httpOnly, secure, sameSite cookie on the response.
+ *                  The cookie is NOT readable by JavaScript (httpOnly),
+ *                  so auth state is synced via /api/auth/me.
+ *   - `logout()`   calls /api/auth/logout, which clears the cookie.
  *   - `fetchUser()` calls /api/auth/me to load the current admin's profile
- *   - `updateProfile()` calls /api/auth/profile to save profile edits
+ *                  (the server verifies the JWT from the cookie).
+ *   - `updateProfile()` calls /api/auth/profile to save profile edits.
  *
- * The middleware (middleware/auth.global.ts) reads the same cookie to
- * protect routes.
+ * The global middleware (middleware/auth.global.ts) calls fetchUser()
+ * to guard protected routes.
  */
 
 export function useAuth() {
   const isAuthenticated = useState("auth.isAuthenticated", () => false);
   const user = useState("auth.user", () => null as null | Record<string, any>);
-  const token = useCookie("auth_token");
 
-  /** Sync the isAuthenticated state with the cookie value. */
+  /**
+   * Sync the isAuthenticated state with the server.
+   *
+   * With JWT + httpOnly cookies, we can't read the cookie from the client
+   * (httpOnly prevents JavaScript access). Instead, we call /api/auth/me
+   * to verify the JWT server-side.
+   *
+   * This is a no-op now — use fetchUser() to sync auth state.
+   */
   const checkAuth = () => {
-    isAuthenticated.value = !!token.value;
+    // Auth state is determined by fetchUser() calling /api/auth/me.
+    // This method is kept for backward compatibility.
   };
 
   /**
    * Log in with email + password.
-   * Returns the API response (success or error).
+   *
+   * On success, the server sets an httpOnly JWT cookie. We then call
+   * fetchUser() to populate the client-side auth state from /api/auth/me.
+   *
+   * @returns The API response (success or error).
    */
   const login = async (email: string, password: string) => {
     try {
@@ -35,10 +49,10 @@ export function useAuth() {
       });
 
       if (response.success) {
-        // The cookie now stores the admin's database ID (set by the server)
-        token.value = String(response.user.id);
-        isAuthenticated.value = true;
+        // The server has set the httpOnly JWT cookie.
+        // Sync client-side state by fetching the user profile.
         user.value = response.user;
+        isAuthenticated.value = true;
       }
 
       return response;
@@ -52,16 +66,15 @@ export function useAuth() {
 
   /**
    * Fetch the current admin's profile from /api/auth/me.
-   * Used to populate the profile menu after page load or refresh.
+   *
+   * The server reads and verifies the JWT from the httpOnly cookie,
+   * so this works reliably across Vercel's serverless instances.
+   *
    * Updates the `user` state and `isAuthenticated` flag.
+   *
+   * @returns The user object on success, or null if not authenticated.
    */
   const fetchUser = async () => {
-    if (!token.value) {
-      isAuthenticated.value = false;
-      user.value = null;
-      return null;
-    }
-
     try {
       const response = await $fetch("/api/auth/me", {
         method: "GET",
@@ -76,7 +89,6 @@ export function useAuth() {
       return null;
     } catch (error: any) {
       // If the cookie is invalid/expired, clear state
-      token.value = null;
       isAuthenticated.value = false;
       user.value = null;
       return null;
@@ -116,14 +128,15 @@ export function useAuth() {
     }
   };
 
-  /** Log out — clears the cookie and resets state. */
+  /**
+   * Log out — clears the cookie (server-side) and resets client state.
+   */
   const logout = async () => {
     try {
       await $fetch("/api/auth/logout", { method: "POST" });
     } catch {
-      // Ignore errors — we clear the cookie regardless
+      // Ignore errors — we clear the state regardless
     }
-    token.value = null;
     isAuthenticated.value = false;
     user.value = null;
   };

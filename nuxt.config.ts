@@ -109,7 +109,8 @@ export default defineNuxtConfig({
     '/api/attendance': { cache: { swr: true, maxAge: 60 } },
     '/api/fees': { cache: { swr: true, maxAge: 60 } },
     '/api/results': { cache: { swr: true, maxAge: 60 } },
-    '/api/auth/me': { cache: { swr: true, maxAge: 30 } }
+    // /api/auth/me is NOT cached — it reads the JWT cookie and must
+    // return fresh data for each user (caching would leak user data).
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -123,6 +124,10 @@ export default defineNuxtConfig({
     dbName: process.env.DB_NAME || '',
 
     sessionSecret: process.env.SESSION_SECRET || '',
+
+    // JWT secret for signing/verifying auth tokens stored in httpOnly cookies.
+    // MUST be set in Vercel Project Settings → Environment Variables.
+    jwtSecret: process.env.JWT_SECRET || '',
 
     apiKey: process.env.API_KEY || '',
 

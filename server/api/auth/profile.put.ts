@@ -1,6 +1,6 @@
-import { getCookie } from "h3";
 import bcrypt from "bcryptjs";
 import { query } from "~/server/utils/db";
+import { requireAuth } from "~/server/utils/auth";
 
 /**
  * PUT /api/auth/profile
@@ -12,38 +12,19 @@ import { query } from "~/server/utils/db";
  *   - email:            (string) new email address
  *   - new_password:     (string, optional) new password to set
  *
- * The admin is identified by the `auth_token` cookie (admin ID). 
+ * The admin is identified by the JWT in the `auth_token` cookie (verified
+ * via requireAuth). No database lookup is needed to identify the user —
+ * the user's id comes from the decoded JWT.
  *
  * On success: { success: true, user: { id, name, email } }
  * On failure: 401 (not authenticated), 400 (validation error).
  */
 export default defineEventHandler(async (event) => {
-  const token = getCookie(event, "auth_token");
-
-  if (!token) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Not authenticated.",
-    });
-  }
+  // Verify the JWT and get the authenticated user
+  const user = requireAuth(event);
 
   const body = await readBody(event);
   const { name, email, new_password } = body;
-
-  // Look up the admin by ID (from the cookie)
-  const [rows] = await query(
-    "SELECT id, name, email, password_hash FROM admins WHERE id = ? LIMIT 1",
-    [token]
-  );
-
-  const admin = rows?.[0];
-
-  if (!admin) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: "Admin not found.",
-    });
-  }
 
   // Build the update query dynamically based on which fields are provided
   const updates: string[] = [];
@@ -75,7 +56,7 @@ export default defineEventHandler(async (event) => {
   // Always update the updated_at timestamp
   updates.push("updated_at = NOW()");
 
-  params.push(admin.id);
+  params.push(user.id);
 
   await query(
     `UPDATE admins SET ${updates.join(", ")} WHERE id = ?`,
@@ -87,9 +68,9 @@ export default defineEventHandler(async (event) => {
     success: true,
     message: "Profile updated successfully.",
     user: {
-      id: admin.id,
-      name: name !== undefined && name !== null && name !== "" ? name : admin.name,
-      email: email !== undefined && email !== null && email !== "" ? email : admin.email,
+      id: user.id,
+      name: name !== undefined && name !== null && name !== "" ? name : user.name,
+      email: email !== undefined && email !== null && email !== "" ? email : user.email,
     },
   };
 });

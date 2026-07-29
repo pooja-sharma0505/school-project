@@ -162,14 +162,18 @@
 <script setup lang="ts">
 const route = useRoute()
 const sidebarOpen = ref(false)
-const { fetchUser } = useAuth()
+const { isAuthenticated, fetchUser } = useAuth()
 
 // Fetch the current admin's profile on mount so the ProfileMenu
-// can display their name/avatar without a page refresh
-// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+// can display their name/avatar without a page refresh.
+// The middleware may have already called fetchUser(), so we check
+// isAuthenticated first to avoid a duplicate API call.
 const { pending: userLoading } = await useAsyncData(
   'auth-user',
-  () => fetchUser(),
+  async () => {
+    if (isAuthenticated.value) return null
+    return fetchUser()
+  },
   { server: true, lazy: false }
 )
 

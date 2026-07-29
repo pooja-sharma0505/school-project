@@ -1,13 +1,15 @@
-import { setCookie } from "h3";
 import bcrypt from "bcryptjs";
 import { query, getDbConfigSummary } from "~/server/utils/db";
+import { setAuthCookie } from "~/server/utils/auth";
 
 /**
  * Login endpoint — validates admin credentials against the `admins` table
- * in the database and sets an auth cookie.
+ * in the database and sets a JWT auth cookie.
  *
- * On success: sets an `auth_token` cookie (7-day expiry) containing the admin's
- *   database ID, and returns { success: true, user: { id, email, name } }
+ * On success: signs a JWT containing { id, email, name, role } using
+ *   JWT_SECRET (runtime config), expiring in 7 days, and sets it as an
+ *   httpOnly, secure, sameSite cookie on the response.
+ *   Returns { success: true, user: { id, email, name, role } }
  *
  * On failure: throws a 401 error.
  *
@@ -46,7 +48,7 @@ export default defineEventHandler(async (event) => {
 
     // ── Look up the admin by email ──
     const [rows] = await query(
-      "SELECT id, email, password_hash, name FROM admins WHERE email = ? LIMIT 1",
+      "SELECT id, email, password_hash, name, role FROM admins WHERE email = ? LIMIT 1",
       [email]
     );
 
@@ -83,23 +85,23 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // ── Sign a JWT and set it as an httpOnly, secure, sameSite cookie ──
+    // The JWT contains the admin's id, email, name, and role.
+    // On Vercel's serverless platform, this is stateless — no shared session
+    // store is needed, so the cookie persists across function invocations.
+    const user = {
+      id: admin.id,
+      email: admin.email,
+      name: admin.name,
+      role: admin.role || "admin",
+    };
 
-    // Set auth cookie — stores the admin's database ID so the server can look up
-    // their profile on subsequent requests (e.g. /api/auth/me).
-    setCookie(event, "auth_token", String(admin.id), {
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
-      sameSite: "strict",
-    });
+    setAuthCookie(event, user);
 
     return {
       success: true,
       message: "Login successful",
-      user: {
-        id: admin.id,
-        email: admin.email,
-        name: admin.name,
-      },
+      user,
     };
   } catch (error: any) {
     // ── Log the COMPLETE error including stack trace ──
