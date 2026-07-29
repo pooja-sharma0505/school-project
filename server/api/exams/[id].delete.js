@@ -1,5 +1,6 @@
 import { query } from "~/server/utils/db";
-import { withErrorHandler, requireAuth } from "~/server/utils/api";
+import { withErrorHandler } from "~/server/utils/api";
+import { requireAuth } from "~/server/utils/auth";
 
 export default defineEventHandler(
   withErrorHandler(async (event) => {

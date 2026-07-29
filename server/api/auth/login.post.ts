@@ -47,8 +47,16 @@ export default defineEventHandler(async (event) => {
     console.log("DB HEALTH CHECK:", healthRows);
 
     // ── Look up the admin by email ──
+    // NOTE: We intentionally do NOT select the `role` column here.
+    // The Supabase migration (20260728000000_create_admins_table.sql) includes
+    // a `role` column, but the TiDB Cloud (MySQL) database may not have it
+    // if it was provisioned before that migration was applied. Selecting a
+    // non-existent column throws "Unknown column 'role' in 'field list'".
+    // Instead, we default role to 'admin' in the JWT payload below.
+    // To add the column to TiDB Cloud, run:
+    //   ALTER TABLE admins ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'admin';
     const [rows] = await query(
-      "SELECT id, email, password_hash, name, role FROM admins WHERE email = ? LIMIT 1",
+      "SELECT id, email, password_hash, name FROM admins WHERE email = ? LIMIT 1",
       [email]
     );
 
@@ -89,11 +97,12 @@ export default defineEventHandler(async (event) => {
     // The JWT contains the admin's id, email, name, and role.
     // On Vercel's serverless platform, this is stateless — no shared session
     // store is needed, so the cookie persists across function invocations.
+    // Role defaults to 'admin' since the column may not exist in TiDB Cloud.
     const user = {
       id: admin.id,
       email: admin.email,
       name: admin.name,
-      role: admin.role || "admin",
+      role: "admin",
     };
 
     setAuthCookie(event, user);

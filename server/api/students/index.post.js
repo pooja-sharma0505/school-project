@@ -1,6 +1,7 @@
 import { query } from "~/server/utils/db";
 import { readBody } from "h3";
-import { withErrorHandler, validateBody, badRequest, requireAuth } from "~/server/utils/api";
+import { withErrorHandler, validateBody, badRequest } from "~/server/utils/api";
+import { requireAuth } from "~/server/utils/auth";
 
 export default defineEventHandler(
   withErrorHandler(async (event) => {

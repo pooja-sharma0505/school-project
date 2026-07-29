@@ -123,13 +123,9 @@ export default defineNuxtConfig({
     dbPassword: process.env.DB_PASSWORD || '',
     dbName: process.env.DB_NAME || '',
 
-    sessionSecret: process.env.SESSION_SECRET || '',
-
     // JWT secret for signing/verifying auth tokens stored in httpOnly cookies.
     // MUST be set in Vercel Project Settings → Environment Variables.
     jwtSecret: process.env.JWT_SECRET || '',
-
-    apiKey: process.env.API_KEY || '',
 
     adminEmail: process.env.ADMIN_EMAIL || 'admin@scholar.edu',
     adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
