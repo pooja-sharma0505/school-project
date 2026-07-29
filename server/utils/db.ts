@@ -9,6 +9,10 @@ let pool: mysql.Pool | undefined;
 /**
  * Validate that all required database environment variables are present.
  * Throws a clear, actionable error if any are missing.
+ *
+ * Also validates SESSION_SECRET, which is required for secure cookie signing
+ * in production (Vercel). If missing, the app should still function but
+ * cookies will not be cryptographically signed.
  */
 function validateDbConfig(config: any): void {
   const required = ["dbHost", "dbPort", "dbUser", "dbPassword", "dbName"];
@@ -32,6 +36,15 @@ function validateDbConfig(config: any): void {
       `Database configuration incomplete — missing environment variable(s): ${varNames}. ` +
         "On Vercel, add these in Project Settings → Environment Variables. " +
         "Locally, copy .env.example to .env and fill in your values."
+    );
+  }
+
+  // Warn (but don't throw) if SESSION_SECRET is missing — it's needed for
+  // secure cookie signing in production.
+  if (!process.env.SESSION_SECRET) {
+    console.warn(
+      "SESSION_SECRET is not set. Cookies will not be cryptographically signed. " +
+        "On Vercel, add SESSION_SECRET in Project Settings → Environment Variables."
     );
   }
 }
@@ -70,9 +83,9 @@ export default function getPool() {
       password: config.dbPassword,
       database: config.dbName,
 
-  ssl: {
-  rejectUnauthorized: false,
-},
+      ssl: {
+        rejectUnauthorized: false,
+      },
 
       waitForConnections: true,
 

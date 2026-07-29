@@ -122,10 +122,13 @@ export default defineNuxtConfig({
     dbPassword: process.env.DB_PASSWORD || '',
     dbName: process.env.DB_NAME || '',
 
+    sessionSecret: process.env.SESSION_SECRET || '',
+
     apiKey: process.env.API_KEY || '',
 
     adminEmail: process.env.ADMIN_EMAIL || 'admin@scholar.edu',
     adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
+
 
     public: {
       supabaseUrl:
