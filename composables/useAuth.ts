@@ -76,8 +76,14 @@ export function useAuth() {
    */
   const fetchUser = async () => {
     try {
+      // On the server, internal $fetch calls do not automatically forward
+      // the incoming browser cookies. Pass the cookie header through so
+      // /api/auth/me can verify the existing auth_token during SSR.
+      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined;
+
       const response = await $fetch("/api/auth/me", {
         method: "GET",
+        headers,
       });
 
       if (response.success) {

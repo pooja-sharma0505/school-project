@@ -80,24 +80,23 @@ export default defineNuxtConfig({
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Route Rules — SSR for dynamic pages, ISR for static-ish data,
-  // and server caching via routeRules cache on API routes.
+  // Route Rules — SSR for auth-protected pages and server caching
+  // only on API routes that are safe to cache.
   // ─────────────────────────────────────────────────────────────────────────────
   routeRules: {
     // Login page — no auth, static prerender
     '/login': { prerender: true, static: true },
 
-    // Dashboard — SSR with short cache (data changes frequently)
-    '/': { ssr: true, swr: 60 },
-
-    // List pages — SSR with 60-second SWR
-    '/students': { ssr: true, swr: 60 },
-    '/classes': { ssr: true, swr: 60 },
-    '/subjects': { ssr: true, swr: 60 },
-    '/attendance': { ssr: true, swr: 60 },
-    '/exams': { ssr: true, swr: 60 },
-    '/fees': { ssr: true, swr: 60 },
-    '/results': { ssr: true, swr: 60 },
+    // Protected pages — SSR only. Do not use SWR/ISR here because auth
+    // redirects and user-specific HTML must be evaluated per request.
+    '/': { ssr: true },
+    '/students': { ssr: true },
+    '/classes': { ssr: true },
+    '/subjects': { ssr: true },
+    '/attendance': { ssr: true },
+    '/exams': { ssr: true },
+    '/fees': { ssr: true },
+    '/results': { ssr: true },
 
     // API routes — server cache with different TTLs
     '/api/health': { static: true, swr: 10 },

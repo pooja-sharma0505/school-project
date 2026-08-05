@@ -59,6 +59,25 @@ function getJwtSecret(): string {
 }
 
 /**
+ * Use secure cookies only when the current request is actually HTTPS.
+ *
+ * Local XAMPP / Nuxt development often runs over plain HTTP, and browsers
+ * reject `Secure` cookies in that case. On Vercel or other HTTPS deployments,
+ * `x-forwarded-proto` is typically set to `https`, so the auth cookie remains
+ * secure in production.
+ */
+function shouldUseSecureCookie(event: H3Event): boolean {
+  const forwardedProto = event.node.req.headers['x-forwarded-proto']
+
+  if (typeof forwardedProto === 'string') {
+    return forwardedProto.split(',')[0].trim() === 'https'
+  }
+
+  const socket = event.node.req.socket as { encrypted?: boolean }
+  return Boolean(socket.encrypted)
+}
+
+/**
  * JWT expiry (7 days).
  */
 const JWT_EXPIRES_IN = '7d'
@@ -87,6 +106,7 @@ export const AUTH_COOKIE_NAME = 'auth_token'
  */
 export function setAuthCookie(event: H3Event, user: AuthUser): void {
   const secret = getJwtSecret()
+  const secure = shouldUseSecureCookie(event)
 
   const token = jwt.sign(
     {
@@ -101,7 +121,7 @@ export function setAuthCookie(event: H3Event, user: AuthUser): void {
 
   setCookie(event, AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: true,
+    secure,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
     path: '/',
@@ -169,10 +189,12 @@ export function requireAuth(event: H3Event): AuthUser {
  * @param event   The H3Event from the route handler.
  */
 export function clearAuthCookie(event: H3Event): void {
+  const secure = shouldUseSecureCookie(event)
+
   deleteCookie(event, AUTH_COOKIE_NAME, {
     path: '/',
     httpOnly: true,
-    secure: true,
+    secure,
     sameSite: 'lax',
   })
 }

@@ -6,9 +6,9 @@
  * cookie directly, we call /api/auth/me (via useAuth().fetchUser()) to
  * verify the JWT server-side.
  *
- * On the initial page load (SSR), the middleware runs on the server and
- * the httpOnly cookie is sent automatically by the browser. The /api/auth/me
- * call verifies the JWT and returns the user.
+ * On the initial page load (SSR), the middleware runs on the server.
+ * fetchUser() must forward the incoming cookie header to /api/auth/me so
+ * the server can verify the existing JWT and return the user.
  *
  * On subsequent client-side navigations, the auth state is already cached
  * in useAuth().isAuthenticated, so no extra API call is needed.
