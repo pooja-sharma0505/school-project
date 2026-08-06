@@ -150,7 +150,7 @@ export default defineNuxtConfig({
   experimental: {
     payloadExtraction: true,
     viewTransition: true,
-    appManifest: true,
+    appManifest: false,
     asyncContext: true
   },
 

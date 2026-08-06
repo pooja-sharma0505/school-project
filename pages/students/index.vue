@@ -516,6 +516,8 @@ return
 const isEdit = !!editingStudent.value
 
 showForm.value = false
+resetForm()
+
 await refresh()
 
 if (isEdit) {
@@ -523,8 +525,6 @@ if (isEdit) {
 } else {
   toast.success("Student added successfully.")
 }
-
-resetForm()
 
   } catch (error) {
 

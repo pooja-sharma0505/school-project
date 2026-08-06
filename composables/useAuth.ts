@@ -84,6 +84,7 @@ export function useAuth() {
       const response = await $fetch("/api/auth/me", {
         method: "GET",
         headers,
+        dedupe: 'defer',
       });
 
       if (response.success) {

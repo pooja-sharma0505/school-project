@@ -326,6 +326,8 @@
 
 
 <script setup>
+import { todayISO } from '~/utils/format'
+
 const toast = useToast()
 const fees = ref([])
 const students = ref([])
@@ -358,10 +360,10 @@ const form = ref({
 const paymentForm = ref({
   paid_amount: "",
   payment_method: "cash",
-  paid_date: new Date().toISOString().split("T")[0]
+  paid_date: todayISO()
 })
 
-const today = new Date().toISOString().split("T")[0]
+const today = todayISO()
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat("en-IN", {
@@ -591,7 +593,7 @@ const openPayment = (fee) => {
       Number(fee.amount) - Number(fee.paid_amount)
     ),
     payment_method: fee.payment_method || "cash",
-    paid_date: new Date().toISOString().split("T")[0]
+    paid_date: todayISO()
   }
 
   paymentError.value = ""
@@ -732,7 +734,7 @@ const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
   'fees-page',
   async () => {
     await fetchStudents()
-    await refresh()
+    await fetchFees()
   },
   { server: true, lazy: false }
 )

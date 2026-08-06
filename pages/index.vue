@@ -40,8 +40,8 @@
         <p class="font-semibold text-red-800">Database Connection Issue</p>
         <p class="text-sm text-red-700">{{ apiError }}</p>
       </div>
-      <button class="btn-primary btn-sm shrink-0" :disabled="seeding" @click="seedDatabase">
-        {{ seeding ? "Seeding..." : "Seed Sample Data" }}
+      <button class="btn-primary btn-sm shrink-0" :disabled="retrying" @click="retryDashboard">
+        {{ retrying ? "Retrying..." : "Retry Connection" }}
       </button>
     </div>
 
@@ -120,7 +120,7 @@
         </div>
 
         <div v-if="loading" class="p-5 rounded-xl bg-slate-100 h-[84px] animate-pulse"></div>
-        <div v-else-if="fees.length === 0" class="py-4">
+        <div v-else-if="feeStats.collected === 0 && feeStats.pending === 0" class="py-4">
           <EmptyState message="No fee records yet. Add a fee to get started.">
             <template #action>
               <NuxtLink to="/fees" class="btn-primary">Add Fee</NuxtLink>
@@ -151,10 +151,10 @@
 const loading = ref(true)
 const dbHealthy = ref(true)
 const apiError = ref("")
-const seeding = ref(false)
+const retrying = ref(false)
+const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 
 const recentStudents = ref([])
-const fees = ref([])
 const feeStats = ref({ collected: 0, pending: 0 })
 
 const stats = ref([
@@ -174,8 +174,6 @@ const formatCurrency = (value) => {
   }).format(Number(value || 0))
 }
 
-const today = new Date().toISOString().split("T")[0]
-
 const todayFormatted = new Date().toLocaleDateString("en-IN", {
   weekday: "long",
   month: "long",
@@ -192,57 +190,35 @@ async function loadDashboard() {
   apiError.value = ""
 
   try {
-    // Check DB health first
-    try {
-      const health = await $fetch("/api/health")
-      dbHealthy.value = health.ok
-    } catch {
-      dbHealthy.value = false
-      apiError.value = "Unable to connect to the database. Click 'Seed Sample Data' to try again, or check your connection."
-      return
-    }
-
-    const [students, classes, subjects, attendance, feesData, exams] = await Promise.all([
-      $fetch("/api/students"),
-      $fetch("/api/classes"),
-      $fetch("/api/subjects"),
-      $fetch("/api/attendance"),
-      $fetch("/api/fees"),
-      $fetch("/api/exams")
-    ])
-
-    fees.value = feesData
-    recentStudents.value = students.slice(0, 5)
-
-    // Students
-    stats.value[0].value = students.length
-    stats.value[0].trend = `${students.filter(s => s.status === "active").length} active`
-
-    // Classes
-    stats.value[1].value = classes.length
-    stats.value[1].trend = `${classes.filter(c => c.status === "active").length} active`
-
-    // Subjects
-    stats.value[2].value = subjects.length
-    stats.value[2].trend = `${subjects.filter(s => s.status === "active").length} active`
-
-    // Present Today
-    const presentToday = attendance.filter(a => {
-      const date = new Date(a.attendance_date).toISOString().split("T")[0]
-      return date === today && a.status === "present"
+    const data = await $fetch("/api/dashboard", {
+      headers: requestHeaders
     })
-    stats.value[3].value = presentToday.length
+
+    dbHealthy.value = data.dbHealthy
+
+    // Recent students
+    recentStudents.value = data.recentStudents
+
+    // Fee stats
+    feeStats.value = data.feeStats
+
+    // Stats
+    stats.value[0].value = data.stats.students
+    stats.value[0].trend = `${data.stats.studentsActive} active`
+
+    stats.value[1].value = data.stats.classes
+    stats.value[1].trend = `${data.stats.classesActive} active`
+
+    stats.value[2].value = data.stats.subjects
+    stats.value[2].trend = `${data.stats.subjectsActive} active`
+
+    stats.value[3].value = data.stats.presentToday
     stats.value[3].trend = "Today"
 
-    // Fees
-    feeStats.value.collected = feesData.reduce((sum, fee) => sum + Number(fee.paid_amount), 0)
-    feeStats.value.pending = feesData.reduce((sum, fee) => sum + (Number(fee.amount) - Number(fee.paid_amount)), 0)
-    stats.value[4].value = feesData.filter(fee => fee.status !== "paid").length
-    stats.value[4].trend = formatCurrency(feeStats.value.pending)
+    stats.value[4].value = data.stats.pendingFees
+    stats.value[4].trend = formatCurrency(data.feeStats.pending)
 
-    // Upcoming Exams
-    const upcoming = exams.filter(exam => new Date(exam.exam_date) >= new Date(today))
-    stats.value[5].value = upcoming.length
+    stats.value[5].value = data.stats.upcomingExams
     stats.value[5].trend = "Scheduled"
 
   } catch (error) {
@@ -254,20 +230,15 @@ async function loadDashboard() {
   }
 }
 
-async function seedDatabase() {
-  seeding.value = true
+async function retryDashboard() {
+  retrying.value = true
   try {
-    const result = await $fetch("/api/seed")
-    if (result.success) {
-      await refresh()
-    } else {
-      apiError.value = result.error || "Failed to seed database."
-    }
+    await refresh()
   } catch (error) {
-    console.error("Seed error:", error)
-    apiError.value = "Failed to seed database."
+    console.error("Retry error:", error)
+    apiError.value = "Failed to reload dashboard data."
   } finally {
-    seeding.value = false
+    retrying.value = false
   }
 }
 

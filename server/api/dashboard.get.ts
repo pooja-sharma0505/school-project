@@ -16,13 +16,18 @@
  */
 
 import { query } from '~/server/utils/db'
+import { requireAuth } from '~/server/utils/auth'
+import { normalizeDateOnly, todayISO } from '~/utils/format'
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  requireAuth(event)
+
   // ── Parallel queries — all run simultaneously ────────────────────────
   // Each query selects ONLY the columns the dashboard needs, reducing
   // both DB I/O and JSON payload size.
   const [
-    studentsRows,
+    recentStudentsRows,
+    studentStatsRows,
     classesRows,
     subjectsRows,
     attendanceRows,
@@ -37,6 +42,13 @@ export default defineEventHandler(async () => {
       FROM students
       ORDER BY id DESC
       LIMIT 5
+    `),
+
+    query(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active
+      FROM students
     `),
 
     // Classes: aggregate count + active count in a single query
@@ -80,7 +92,7 @@ export default defineEventHandler(async () => {
   ])
 
   // ── Process results ──────────────────────────────────────────────────
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayISO()
 
   // Present today = count of attendance records with status 'present' for today
   const presentToday = attendanceRows[0].filter(
@@ -89,7 +101,7 @@ export default defineEventHandler(async () => {
 
   // Upcoming exams = exams with date >= today
   const upcomingExams = examsRows[0].filter(
-    (e: any) => e.exam_date && new Date(e.exam_date).toISOString().split('T')[0] >= today
+    (e: any) => normalizeDateOnly(e.exam_date) >= today
   ).length
 
   // Fee stats: aggregate in JS (avoids extra SQL round-trips)
@@ -110,8 +122,8 @@ export default defineEventHandler(async () => {
   return {
     ok: true,
     stats: {
-      students: studentsRows[0].length,
-      studentsActive: studentsRows[0].filter((s: any) => s.status === 'active').length,
+      students: studentStatsRows[0][0]?.total || 0,
+      studentsActive: studentStatsRows[0][0]?.active || 0,
       classes: classesRows[0][0]?.total || 0,
       classesActive: classesRows[0][0]?.active || 0,
       subjects: subjectsRows[0][0]?.total || 0,
@@ -120,7 +132,7 @@ export default defineEventHandler(async () => {
       pendingFees,
       upcomingExams
     },
-    recentStudents: studentsRows[0],
+    recentStudents: recentStudentsRows[0],
     feeStats,
     dbHealthy: healthRows[0].length > 0
   }

@@ -648,13 +648,14 @@ return
     }
 
     showForm.value = false
+    resetForm()
 
     await refresh()
-if (editingSubject.value) {
-  toast.success("Subject updated successfully.")
-} else {
-  toast.success("Subject added successfully.")
-}
+    if (editingSubject.value) {
+      toast.success("Subject updated successfully.")
+    } else {
+      toast.success("Subject added successfully.")
+    }
   } catch (error) {
 
     console.error(error)

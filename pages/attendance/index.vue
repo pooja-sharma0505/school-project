@@ -138,19 +138,22 @@
 
 
 <script setup>
+import { shiftISODate, todayISO } from '~/utils/format'
 
 const toast = useToast()
+const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 const loading = ref(true)
 const saving = ref(false)
 const justSaved = ref(false)
 
 const students = ref([])
 const attendanceMap = ref({})
+const attendanceRecords = ref({})
 
 const classFilter = ref("")
 const search = ref("")
 const selectedDate = ref(
-  new Date().toISOString().split("T")[0]
+  todayISO()
 )
 
 const classes = computed(() => {
@@ -235,7 +238,7 @@ const markAll = (status) => {
 
   justSaved.value = false
 
-  toast.success("All students marked as present.")
+  toast.success(`All students marked as ${status}.`)
 }
 
 const stats = computed(() => {
@@ -274,15 +277,11 @@ const formatDate = (date) => {
 }
 
 const shiftDate = (days) => {
-  const date = new Date(selectedDate.value + "T00:00")
-
-  date.setDate(date.getDate() + days)
-
-  selectedDate.value = date.toISOString().split("T")[0]
+  selectedDate.value = shiftISODate(selectedDate.value, days)
 }
 
 const isToday = computed(() => {
-  return selectedDate.value === new Date().toISOString().split("T")[0]
+  return selectedDate.value === todayISO()
 })
 const loadData = async () => {
   loading.value = true
@@ -291,12 +290,15 @@ const loadData = async () => {
   try {
     const [studentData, attendanceData] = await Promise.all([
       $fetch("/api/students"),
-      $fetch(`/api/attendance?date=${selectedDate.value}`)
+      $fetch(`/api/attendance?date=${selectedDate.value}`, {
+        headers: requestHeaders
+      })
     ])
 
     students.value = studentData
 
   const map = {}
+  const records = {}
 
 students.value.forEach((student) => {
   map[student.id] = "unmarked"
@@ -304,9 +306,11 @@ students.value.forEach((student) => {
 
 attendanceData.forEach((item) => {
   map[item.student_id] = item.status
+  records[item.student_id] = item
 })
 
 attendanceMap.value = map
+attendanceRecords.value = records
   } catch (error) {
   console.error("Load Error:", error)
   toast.error("Failed to load attendance.")
@@ -320,15 +324,18 @@ const saveAttendance = async () => {
 
   try {
     const requests = filteredStudents.value.map((student) => {
-      return $fetch("/api/attendance", {
-        method: "POST",
+      const existing = attendanceRecords.value[student.id]
+      const status =
+        attendanceMap.value[student.id] === "unmarked"
+          ? "present"
+          : attendanceMap.value[student.id]
+
+      return $fetch(existing ? `/api/attendance/${existing.id}` : "/api/attendance", {
+        method: existing ? "PUT" : "POST",
         body: {
           student_id: student.id,
           attendance_date: selectedDate.value,
-       status:
-  attendanceMap.value[student.id] === "unmarked"
-    ? "present"
-    : attendanceMap.value[student.id]
+          status
         }
       })
     })

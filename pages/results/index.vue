@@ -26,8 +26,8 @@
       </div>
     </div>
 
-    <div v-if="!selectedExamId" class="bg-white rounded-2xl border border-slate-200 shadow-sm">
-      <EmptyState message="Select an exam to enter or view results."><template #action><NuxtLink to="/exams" class="btn-primary">Go to Exams</NuxtLink></template></EmptyState>
+    <div v-if="!selectedExam" class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <EmptyState :message="selectedExamId ? 'The selected exam could not be found.' : 'Select an exam to enter or view results.'"><template #action><NuxtLink to="/exams" class="btn-primary">Go to Exams</NuxtLink></template></EmptyState>
     </div>
 
     <template v-else>
@@ -239,7 +239,17 @@
 
 const toast = useToast()
 const route = useRoute()
+const router = useRouter()
+const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 const { computeGrade, gradeColor } = useGrade()
+
+const normalizeExamId = (value) => {
+  if (Array.isArray(value)) {
+    return value[0] ? String(value[0]) : ''
+  }
+
+  return value ? String(value) : ''
+}
 
 const exams = ref([])
 const students = ref([])
@@ -248,19 +258,18 @@ const loading = ref(true)
 const saving = ref(false)
 const justSaved = ref(false)
 
-const selectedExamId = ref(route.query.exam || '')
+const selectedExamId = ref(normalizeExamId(route.query.exam))
 const search = ref('')
 const marksInput = ref({})
 const existingResults = ref({})
 
-const selectedExam = computed(() => 
-exams.value.find(e => e.id === selectedExamId.value)
-
+const selectedExam = computed(() =>
+  exams.value.find((exam) => String(exam.id) === selectedExamId.value)
 )
 
 const filteredStudents = computed(() => {
   if (!selectedExam.value?.class) return students.value.filter(s => s.status === 'active')
-  return students.value.filter(s => s.status === 'active' && (s.class === selectedExam.value.class || !s.class))
+  return students.value.filter(s => s.status === 'active' && s.class === selectedExam.value.class)
 })
 const searchedStudents = computed(() => {
   const q = search.value.toLowerCase()
@@ -316,7 +325,9 @@ async function loadResults() {
 
   try {
 
-    const data = await $fetch(`/api/results?exam_id=${selectedExamId.value}`)
+    const data = await $fetch(`/api/results?exam_id=${selectedExamId.value}`, {
+      headers: requestHeaders
+    })
 
     results.value = data
 
@@ -353,7 +364,7 @@ const saveResults = async () => {
   try {
     const exam = selectedExam.value
 
-    const toUpsert = searchedStudents.value
+    const toUpsert = filteredStudents.value
       .filter(s => marksInput.value[s.id] !== undefined && marksInput.value[s.id] !== '')
       .map(s => {
         const marks = parseFloat(marksInput.value[s.id]) || 0
@@ -371,12 +382,14 @@ const saveResults = async () => {
         }
       })
 
-    for (const result of toUpsert) {
-      await $fetch('/api/results', {
-        method: 'POST',
-        body: result
-      })
-    }
+    await Promise.all(
+      toUpsert.map((result) =>
+        $fetch(result.id ? `/api/results/${result.id}` : '/api/results', {
+          method: result.id ? 'PUT' : 'POST',
+          body: result
+        })
+      )
+    )
 
     justSaved.value = true
 
@@ -421,7 +434,31 @@ const doDeleteResult = async () => {
   }
 }
 
-watch(selectedExamId, loadResults)
+watch(
+  () => route.query.exam,
+  (examId) => {
+    const normalized = normalizeExamId(examId)
+
+    if (normalized !== selectedExamId.value) {
+      selectedExamId.value = normalized
+    }
+  }
+)
+
+watch(selectedExamId, async (examId) => {
+  const normalized = normalizeExamId(route.query.exam)
+
+  if (examId !== normalized) {
+    await router.replace({
+      query: {
+        ...route.query,
+        exam: examId || undefined
+      }
+    })
+  }
+
+  await loadResults()
+})
 
 async function fetchExams() {
 
@@ -458,7 +495,14 @@ const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
     await fetchExams()
     await fetchStudents()
     if (exams.value.length) {
-      selectedExamId.value = exams.value[0].id
+      const hasRequestedExam = exams.value.some(
+        (exam) => String(exam.id) === selectedExamId.value
+      )
+
+      if (!hasRequestedExam) {
+        selectedExamId.value = String(exams.value[0].id)
+      }
+
       await loadResults()
     }
   },

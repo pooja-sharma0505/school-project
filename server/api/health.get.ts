@@ -11,7 +11,7 @@ import { healthCheck } from "~/server/utils/db";
  *   - Frontend "is the backend alive?" probes
  *   - CI/CD smoke tests after deployment
  */
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async () => {
   const result = await healthCheck();
 
   if (result.ok) {

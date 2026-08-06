@@ -220,6 +220,8 @@
 
 
 <script setup>
+import { todayISO } from '~/utils/format'
+
 const toast = useToast()
 const exams = ref([])
 const loading = ref(true)
@@ -250,7 +252,7 @@ const form = ref({
 const examStatus = (exam) => {
   if (!exam.exam_date) return "unscheduled"
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayISO()
 
   if (exam.exam_date < today) return "completed"
   if (exam.exam_date === today) return "today"
@@ -313,7 +315,7 @@ const filtered = computed(() => {
   return exams.value.filter((exam) => {
     const matchesSearch =
       !keyword ||
-      exam.name.toLowerCase().includes(keyword) ||
+      (exam.name || "").toLowerCase().includes(keyword) ||
       (exam.subject || "").toLowerCase().includes(keyword) ||
       (exam.term || "").toLowerCase().includes(keyword)
 
@@ -460,7 +462,9 @@ toast.success("Exam deleted successfully.")
   } catch (error) {
   console.error("Delete Error:", error)
   toast.error("Failed to delete exam.")
-}
+  } finally {
+    saving.value = false
+  }
 }
 
 const formatDate = (date) => {
