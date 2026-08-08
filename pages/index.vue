@@ -221,10 +221,12 @@ async function loadDashboard() {
     stats.value[5].value = data.stats.upcomingExams
     stats.value[5].trend = "Scheduled"
 
+    return data
   } catch (error) {
     console.error("Dashboard load error:", error)
     apiError.value = error?.data?.message || error?.message || "Failed to load dashboard data."
     dbHealthy.value = false
+    return null
   } finally {
     loading.value = false
   }

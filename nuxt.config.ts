@@ -99,15 +99,13 @@ export default defineNuxtConfig({
     '/results': { ssr: true },
 
     // API routes — server cache with different TTLs
+    // Only cache endpoints that do NOT require authentication and return
+    // the same data for all users. Auth-protected endpoints (dashboard,
+    // students, classes, subjects, exams, attendance, fees, results)
+    // return user-specific data and must NOT be cached — otherwise a 401
+    // from an unauthenticated request gets cached and served to authenticated
+    // users, causing "data not show" on all pages.
     '/api/health': { static: true, swr: 10 },
-    '/api/dashboard': { cache: { swr: true, maxAge: 60 } },
-    '/api/students': { cache: { swr: true, maxAge: 60 } },
-    '/api/classes': { cache: { swr: true, maxAge: 120 } },
-    '/api/subjects': { cache: { swr: true, maxAge: 120 } },
-    '/api/exams': { cache: { swr: true, maxAge: 120 } },
-    '/api/attendance': { cache: { swr: true, maxAge: 60 } },
-    '/api/fees': { cache: { swr: true, maxAge: 60 } },
-    '/api/results': { cache: { swr: true, maxAge: 60 } },
     // /api/auth/me is NOT cached — it reads the JWT cookie and must
     // return fresh data for each user (caching would leak user data).
   },
@@ -189,10 +187,13 @@ export default defineNuxtConfig({
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Nitro — server engine optimisation for Vercel
+  // Nitro — server engine optimisation
   // ─────────────────────────────────────────────────────────────────────────────
+  // Only use the 'vercel' preset in production (Vercel deployment).
+  // In local development, the Vercel preset can cause server crashes and
+  // incorrect cookie/header handling.
   nitro: {
-    preset: 'vercel',
+    preset: process.env.NODE_ENV === 'production' ? 'vercel' : undefined,
     compressPublicAssets: true,
     storage: {
       cache: {
