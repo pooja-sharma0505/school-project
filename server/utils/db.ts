@@ -41,6 +41,26 @@ function validateDbConfig(config: any): void {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Determine whether TLS/SSL should be enabled for the database connection.
+ *
+ * TiDB Cloud requires TLS 1.2+ with certificate validation.
+ * Clever Cloud MySQL may use a self-signed cert or no TLS at all.
+ * We make this configurable via DB_SSL environment variable:
+ *   - "true"  → enable TLS with rejectUnauthorized (TiDB Cloud)
+ *   - "false" → disable TLS entirely (Clever Cloud shared tier, local dev)
+ *   - unset   → auto-detect: enable TLS only if the host looks like TiDB Cloud
+ */
+function shouldEnableSsl(dbHost: string): boolean {
+  const sslEnv = process.env.DB_SSL;
+  if (sslEnv === "true") return true;
+  if (sslEnv === "false") return false;
+
+  // Auto-detect: TiDB Cloud hosts contain "tidb" or "aws" in the hostname
+  const lowerHost = (dbHost || "").toLowerCase();
+  return lowerHost.includes("tidb") || lowerHost.includes("aws");
+}
+
+/**
  * Get the shared database connection pool, creating it if necessary.
  *
  * The pool is cached at module level so that within a single serverless
@@ -77,6 +97,8 @@ export default function getPool() {
       );
     }
 
+    const useSsl = shouldEnableSsl(config.dbHost);
+
     pool = mysql.createPool({
       host: config.dbHost,
       port: Number(config.dbPort),
@@ -84,28 +106,36 @@ export default function getPool() {
       password: config.dbPassword,
       database: config.dbName,
 
-      // TiDB Cloud requires TLS 1.2+ with certificate validation.
-      ssl: {
-        minVersion: "TLSv1.2",
-        rejectUnauthorized: true,
-      },
+      // TLS/SSL — only enable for providers that require it (TiDB Cloud).
+      // Clever Cloud shared-tier MySQL does NOT support TLS 1.2 with
+      // certificate validation, so we disable SSL for those hosts.
+      ...(useSsl
+        ? {
+            ssl: {
+              minVersion: "TLSv1.2",
+              rejectUnauthorized: true,
+            },
+          }
+        : {}),
 
       waitForConnections: true,
 
-      // Increased from 3 to 10 for better concurrent throughput.
-      // On Vercel serverless, each invocation gets its own pool, so a higher
-      // limit allows more parallel queries within a single warm instance.
-      connectionLimit: 10,
+      // Reduced from 10 to 5 — on Vercel serverless, each invocation gets
+      // its own pool, so a smaller limit is sufficient and reduces the
+      // chance of hitting the DB's max_connections limit.
+      connectionLimit: 5,
 
       queueLimit: 0,
 
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
 
-      // Timeout settings — prevents hanging when the DB drops idle
-      // connections or when the pool is temporarily unavailable.
-      connectTimeout: 60000,
-      idleTimeout: 60000,
+      // Timeout settings — tuned for Vercel's 10s function timeout.
+      // connectTimeout: 10s (was 60s — Vercel kills functions at 10s on Hobby)
+      // idleTimeout: 30s (was 60s — Vercel functions can be idle >60s,
+      //   so we proactively recycle connections to avoid stale ones)
+      connectTimeout: 10000,
+      idleTimeout: 30000,
     });
 
     // Log pool-level errors without exposing secrets.
@@ -169,7 +199,8 @@ function isTransientError(error: any): boolean {
  * @param params  - Array of parameter values for the placeholders
  * @param options - Optional settings:
  *   - safe:    If true, returns [[], null] on error instead of throwing.
- *   - retries: Number of retry attempts for transient failures (default: 2).
+ *   - retries: Number of retry attempts for transient failures (default: 1).
+ *              Reduced from 2 to 1 to stay within Vercel's 10s function timeout.
  * @returns A tuple of [rows, fields]
  */
 export async function query(
@@ -177,7 +208,7 @@ export async function query(
   params?: any[],
   options?: { safe?: boolean; retries?: number }
 ): Promise<any> {
-  const maxRetries = options?.retries ?? 2;
+  const maxRetries = options?.retries ?? 1;
 
   let lastError: any;
 
@@ -209,8 +240,9 @@ export async function query(
         throw error;
       }
 
-      // Wait before retrying (exponential backoff: 500ms, 1s, 2s, ...).
-      const delay = Math.pow(2, attempt) * 500;
+      // Wait before retrying (exponential backoff: 200ms, 400ms).
+      // Reduced from 500ms/1s/2s to stay within Vercel's 10s timeout.
+      const delay = Math.pow(2, attempt) * 200;
       await sleep(delay);
     }
   }
@@ -220,9 +252,14 @@ export async function query(
 
 /**
  * Execute a SELECT query and return just the rows.
+ *
+ * Uses safe mode by default — if the DB connection fails, returns an empty
+ * array instead of throwing. This prevents a single DB hiccup from crashing
+ * the entire page. Callers should check for empty results and show an
+ * appropriate error state.
  */
 export async function safeQuery(sql: string, params?: any[]): Promise<any[]> {
-  const [rows] = await query(sql, params);
+  const [rows] = await query(sql, params, { safe: true });
   return rows;
 }
 

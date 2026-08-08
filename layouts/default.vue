@@ -70,7 +70,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
 
-
             <svg v-else-if="item.icon === 'wallet'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
             </svg>
@@ -89,14 +88,13 @@
     stroke-linecap="round"
     stroke-linejoin="round"
     stroke-width="2"
-    d="M12 6.253v13M12 6.253C10.832 5.477 9.246 5 7.5 5C5.754 5 4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18c1.746 0 3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+    d="M12 6.253v13M12 6.253C10.832 5.477 9.246 5 7.5 5C5.754 5 4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18c1.746 0 3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.268 18 16.5 18c-1.746 0-3.332-.477-4.5-1.253"
   />
 </svg>
 
             <svg v-else-if="item.icon === 'clipboard'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
-
 
             <svg v-else-if="item.icon === 'chart'" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -111,13 +109,13 @@
         <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
           <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
           </div>
           <div class="min-w-0">
-            <p class="text-sm font-semibold text-slate-200 truncate">Administrator</p>
-            <p class="text-xs text-slate-500 truncate">admin@scholar.edu</p>
+            <p class="text-sm font-semibold text-slate-200 truncate">{{ displayName }}</p>
+            <p class="text-xs text-slate-500 truncate">{{ userEmail }}</p>
           </div>
-        
         </div>
       </div>
     </aside>
@@ -128,7 +126,8 @@
       <header class="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 lg:px-8 py-0 flex items-center gap-4 h-16">
         <button class="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-500" @click="sidebarOpen = !sidebarOpen">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
         </button>
 
         <div class="flex-1 min-w-0">
@@ -162,20 +161,23 @@
 <script setup lang="ts">
 const route = useRoute()
 const sidebarOpen = ref(false)
-const { isAuthenticated, fetchUser } = useAuth()
+const { user } = useAuth()
 
-// Fetch the current admin's profile on mount so the ProfileMenu
-// can display their name/avatar without a page refresh.
-// The middleware may have already called fetchUser(), so we check
-// isAuthenticated first to avoid a duplicate API call.
-const { pending: userLoading } = await useAsyncData(
-  'auth-user',
-  async () => {
-    if (isAuthenticated.value) return null
-    return fetchUser()
-  },
-  { server: true, lazy: false }
-)
+// The global auth middleware (middleware/auth.global.ts) already calls
+// fetchUser() to verify the JWT cookie and guard protected routes.
+// We no longer need a redundant fetchUser() call here — the middleware
+// handles it, and the ProfileMenu component reads from the shared
+// useAuth().user state that the middleware populated.
+// This removes a duplicate API call on every page load and prevents
+// the layout from failing when the DB is temporarily unavailable.
+
+const displayName = computed(() => {
+  return user.value?.name || user.value?.email || "Administrator"
+})
+
+const userEmail = computed(() => {
+  return user.value?.email || "admin@scholar.edu"
+})
 
 const navGroups = [
   {
@@ -191,7 +193,7 @@ const navGroups = [
     label: 'Academics',
     items: [
       { label: 'Fees', to: '/fees', icon: 'wallet' },
-       { label: 'Subjects', to: '/subjects', icon: 'book' },
+     { label: 'Subjects', to: '/subjects', icon: 'book' },
       { label: 'Exams', to: '/exams', icon: 'clipboard' },
       { label: 'Results', to: '/results', icon: 'chart' },
     ]

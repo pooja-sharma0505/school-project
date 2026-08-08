@@ -7,12 +7,15 @@
  * consolidates them into a single cached response.
  *
  * Caching is handled by routeRules in nuxt.config.ts:
- *   '/api/dashboard': { cache: { swr: true, maxAge: 60 } }
+ *   '/api/dashboard': { swr: true, maxAge: 60 }
  *
  * Performance:
  *   - All queries run in a single Promise.all (parallel, not serial)
  *   - Each query selects only the columns needed by the dashboard
  *   - No SELECT * — minimal payload
+ *   - Each query uses safe mode so one DB failure doesn't kill the entire
+ *     response — failed queries return empty arrays and the dashboard
+ *     shows 0 for those stats instead of crashing.
  */
 
 import { query } from '~/server/utils/db'
@@ -25,6 +28,10 @@ export default defineEventHandler(async (event) => {
   // ── Parallel queries — all run simultaneously ────────────────────────
   // Each query selects ONLY the columns the dashboard needs, reducing
   // both DB I/O and JSON payload size.
+  //
+  // All queries use { safe: true } so that a single DB connection failure
+  // doesn't crash the entire dashboard. Failed queries return empty arrays,
+  // and the dashboard gracefully shows 0 for those stats.
   const [
     recentStudentsRows,
     studentStatsRows,
@@ -42,14 +49,14 @@ export default defineEventHandler(async (event) => {
       FROM students
       ORDER BY id DESC
       LIMIT 5
-    `),
+    `, undefined, { safe: true }),
 
     query(`
       SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active
       FROM students
-    `),
+    `, undefined, { safe: true }),
 
     // Classes: aggregate count + active count in a single query
     query(`
@@ -57,7 +64,7 @@ export default defineEventHandler(async (event) => {
         COUNT(*) as total,
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active
       FROM classes
-    `),
+    `, undefined, { safe: true }),
 
     // Subjects: aggregate count + active count in a single query
     query(`
@@ -65,47 +72,47 @@ export default defineEventHandler(async (event) => {
         COUNT(*) as total,
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active
       FROM subjects
-    `),
+    `, undefined, { safe: true }),
 
     // Attendance: only today's records, only need status column
     query(`
       SELECT status
       FROM attendance
       WHERE DATE(attendance_date) = CURDATE()
-    `),
+    `, undefined, { safe: true }),
 
     // Fees: only need amount, paid_amount, status for stats
     query(`
       SELECT amount, paid_amount, status
       FROM fees
-    `),
+    `, undefined, { safe: true }),
 
     // Exams: only need exam_date for "upcoming" count
     query(`
       SELECT exam_date
       FROM exams
       WHERE exam_date IS NOT NULL
-    `),
+    `, undefined, { safe: true }),
 
     // Health check: SELECT 1
-    query(`SELECT 1 AS health_check`)
+    query(`SELECT 1 AS health_check`, undefined, { safe: true })
   ])
 
   // ── Process results ──────────────────────────────────────────────────
   const today = todayISO()
 
   // Present today = count of attendance records with status 'present' for today
-  const presentToday = attendanceRows[0].filter(
+  const presentToday = (attendanceRows[0] || []).filter(
     (a: any) => a.status === 'present'
   ).length
 
   // Upcoming exams = exams with date >= today
-  const upcomingExams = examsRows[0].filter(
+  const upcomingExams = (examsRows[0] || []).filter(
     (e: any) => normalizeDateOnly(e.exam_date) >= today
   ).length
 
   // Fee stats: aggregate in JS (avoids extra SQL round-trips)
-  const feeStats = feesRows[0].reduce(
+  const feeStats = (feesRows[0] || []).reduce(
     (acc: { collected: number; pending: number }, fee: any) => {
       acc.collected += Number(fee.paid_amount) || 0
       acc.pending += (Number(fee.amount) || 0) - (Number(fee.paid_amount) || 0)
@@ -115,25 +122,25 @@ export default defineEventHandler(async (event) => {
   )
 
   // Pending fees count
-  const pendingFees = feesRows[0].filter(
+  const pendingFees = (feesRows[0] || []).filter(
     (f: any) => f.status !== 'paid'
   ).length
 
   return {
     ok: true,
     stats: {
-      students: studentStatsRows[0][0]?.total || 0,
-      studentsActive: studentStatsRows[0][0]?.active || 0,
-      classes: classesRows[0][0]?.total || 0,
-      classesActive: classesRows[0][0]?.active || 0,
-      subjects: subjectsRows[0][0]?.total || 0,
-      subjectsActive: subjectsRows[0][0]?.active || 0,
+      students: studentStatsRows[0]?.[0]?.total || 0,
+      studentsActive: studentStatsRows[0]?.[0]?.active || 0,
+      classes: classesRows[0]?.[0]?.total || 0,
+      classesActive: classesRows[0]?.[0]?.active || 0,
+      subjects: subjectsRows[0]?.[0]?.total || 0,
+      subjectsActive: subjectsRows[0]?.[0]?.active || 0,
       presentToday,
       pendingFees,
       upcomingExams
     },
-    recentStudents: recentStudentsRows[0],
+    recentStudents: recentStudentsRows[0] || [],
     feeStats,
-    dbHealthy: healthRows[0].length > 0
+    dbHealthy: (healthRows[0] || []).length > 0
   }
 })

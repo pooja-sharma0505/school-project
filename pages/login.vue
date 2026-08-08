@@ -80,7 +80,11 @@ const handleLogin = async () => {
     const result = await login(email.value, password.value);
 
     if (result.success) {
-      navigateTo("/");
+      // Await navigateTo to ensure the redirect happens after auth state
+      // is fully settled. Without await, the redirect can fire before
+      // the client-side auth state is synced, causing a flash of the
+      // login page or a redirect loop.
+      await navigateTo("/");
     } else {
       error.value = result.error || "Invalid email or password.";
     }

@@ -49,7 +49,6 @@
             @click="openEditProfile"
             class="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           >
-           
             Edit Profile
           </button>
 
@@ -150,11 +149,12 @@ const openEditProfile = () => {
   showEditProfile.value = true;
 };
 
-// Handle logout
+// Handle logout — await navigateTo to ensure redirect happens after
+// auth state is fully cleared, preventing race conditions.
 const handleLogout = async () => {
   open.value = false;
   await logout();
   addToast("You have been logged out.");
-  navigateTo("/login");
+  await navigateTo("/login");
 };
 </script>

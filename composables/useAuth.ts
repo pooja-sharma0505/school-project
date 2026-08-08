@@ -37,7 +37,9 @@ export function useAuth() {
    * Log in with email + password.
    *
    * On success, the server sets an httpOnly JWT cookie. We then call
-   * fetchUser() to populate the client-side auth state from /api/auth/me.
+   * fetchUser() to populate the client-side auth state from /api/auth/me,
+   * ensuring the client state is always in sync with the server-side
+   * JWT verification (not just the login response).
    *
    * @returns The API response (success or error).
    */
@@ -50,9 +52,10 @@ export function useAuth() {
 
       if (response.success) {
         // The server has set the httpOnly JWT cookie.
-        // Sync client-side state by fetching the user profile.
-        user.value = response.user;
-        isAuthenticated.value = true;
+        // Sync client-side state by fetching the user profile from /api/auth/me.
+        // This ensures the client state is verified against the server-side
+        // JWT, not just trusted from the login response.
+        await fetchUser();
       }
 
       return response;
@@ -84,7 +87,6 @@ export function useAuth() {
       const response = await $fetch("/api/auth/me", {
         method: "GET",
         headers,
-        dedupe: 'defer',
       });
 
       if (response.success) {

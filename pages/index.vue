@@ -47,16 +47,26 @@
 
     <!-- Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <NuxtLink v-for="(s, i) in stats" :key="s.label" :to="
-        s.icon === 'users' ? '/students'
-        : s.icon === 'academic-cap' ? '/classes'
-        : s.icon === 'book' ? '/subjects'
-        : s.icon === 'calendar' ? '/attendance'
-        : s.icon === 'wallet' ? '/fees'
-        : '/exams'
-      ">
-        <StatCard :label="s.label" :value="s.value" :icon="s.icon" :color="s.color" :trend="s.trend" />
-      </NuxtLink>
+      <div v-for="(s, i) in stats" :key="s.label">
+        <StatCard
+          v-if="!loading"
+          :label="s.label"
+          :value="s.value"
+          :icon="s.icon"
+          :color="s.color"
+          :trend="s.trend"
+        />
+        <div v-else class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 animate-pulse">
+          <div class="flex items-start justify-between">
+            <div class="flex-1 min-w-0 space-y-2">
+              <div class="h-3 w-24 bg-slate-200 rounded"></div>
+              <div class="h-6 w-16 bg-slate-200 rounded mt-2"></div>
+              <div class="h-3 w-20 bg-slate-200 rounded mt-1"></div>
+            </div>
+            <div class="w-11 h-11 rounded-xl bg-slate-200 shrink-0"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Two columns -->
@@ -197,10 +207,10 @@ async function loadDashboard() {
     dbHealthy.value = data.dbHealthy
 
     // Recent students
-    recentStudents.value = data.recentStudents
+    recentStudents.value = data.recentStudents || []
 
     // Fee stats
-    feeStats.value = data.feeStats
+    feeStats.value = data.feeStats || { collected: 0, pending: 0 }
 
     // Stats
     stats.value[0].value = data.stats.students
@@ -235,7 +245,7 @@ async function loadDashboard() {
 async function retryDashboard() {
   retrying.value = true
   try {
-    await refresh()
+    await refreshData()
   } catch (error) {
     console.error("Retry error:", error)
     apiError.value = "Failed to reload dashboard data."
@@ -244,14 +254,18 @@ async function retryDashboard() {
   }
 }
 
-// OPTIMISATION: Replaced onMounted + $fetch with useAsyncData for SSR
+// Use useAsyncData for SSR — the asyncData function calls loadDashboard()
+// which handles its own loading/error state via refs.
 const { pending: loadingAsync, refresh: refreshData } = await useAsyncData(
   'dashboard',
   () => loadDashboard(),
   { server: true, lazy: false }
 )
 
-const refresh = async () => {
-  await refreshData()
-}
+// Sync the useAsyncData pending state with our loading ref
+watch(loadingAsync, (val) => {
+  if (val !== undefined) {
+    loading.value = val
+  }
+})
 </script>
